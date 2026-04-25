@@ -1,0 +1,13 @@
+acc_testing.txt
+backend_compressor.txt
+EduTech_Backend_Plan.pdf
+
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+node_modules/
+.vscode/
+.idea/
+*.log
