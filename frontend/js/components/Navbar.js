@@ -1,12 +1,12 @@
 import { appState } from '../state.js';
-import { apiClient } from '../api.js';
+import { api } from '../api.js';
 
 export function renderNavbar() {
   const container = document.getElementById('navbar-container');
   const state = appState.get();
 
   let authLinks = '';
-  
+
   if (state.isAuthenticated && state.user) {
     authLinks = \`
       <div class="flex items-center gap-5">
@@ -71,8 +71,8 @@ export function renderNavbar() {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
       try {
-        await apiClient.post('/auth/logout');
-        appState.clearUser();
+        await api.post('/auth/logout');
+        appState.setUser(null, false);
         window.location.hash = '#/login';
       } catch (err) {
         console.error('Logout failed:', err);
