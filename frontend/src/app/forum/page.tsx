@@ -26,7 +26,7 @@ export default function ForumPage() {
       }
       const data = await forum.getThreads();
       // Sort threads by newest first (optional, but good for UX if backend doesn't sort)
-      const sortedThreads = (data.threads || []).sort(
+      const sortedThreads = (data.forum_threads || []).sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
       setThreads(sortedThreads);
@@ -136,11 +136,11 @@ export default function ForumPage() {
               <button
                 type="submit"
                 disabled={isCreating}
-                className={\`px-6 py-2.5 rounded-lg text-sm font-medium transition-all shadow-sm \${
+                className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all shadow-sm ${
                   isCreating
                     ? "bg-stone-200 text-stone-500 cursor-not-allowed"
                     : "bg-stone-900 text-white hover:bg-stone-800 hover:shadow"
-                }\`}
+                }`}
               >
                 {isCreating ? "Menghantar..." : "Terbitkan Perbincangan"}
               </button>

@@ -41,7 +41,7 @@ export default function CourseDetailPage({ params }: { params: { course_id: stri
               const resData = await academic.getResources(mod.id);
               return { ...mod, resources: resData.resources || [] };
             } catch (e) {
-              console.error(\`Failed to fetch resources for module \${mod.id}\`, e);
+              console.error(`Failed to fetch resources for module ${mod.id}`, e);
               return { ...mod, resources: [] };
             }
           })
@@ -69,7 +69,7 @@ export default function CourseDetailPage({ params }: { params: { course_id: stri
       alert("Tanda Selesai berjaya direkodkan!");
       // In a real app, you might refetch the progress here to update the UI
     } catch (err: any) {
-      alert(\`Ralat: \${err.message || "Gagal menanda selesai"}\`);
+      alert(`Ralat: ${err.message || "Gagal menanda selesai"}`);
     } finally {
       setProcessingId(null);
     }
@@ -181,11 +181,11 @@ export default function CourseDetailPage({ params }: { params: { course_id: stri
                           <button
                             onClick={() => handleMarkComplete(res.id)}
                             disabled={processingId === res.id}
-                            className={\`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 shadow-sm border \${
+                            className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 shadow-sm border ${
                               processingId === res.id 
                                 ? "bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed" 
                                 : "bg-white text-neutral-700 border-neutral-200 hover:border-neutral-900 hover:text-neutral-900"
-                            }\`}
+                            }`}
                           >
                             {processingId === res.id ? "Memproses..." : "✓ Tanda Selesai"}
                           </button>
