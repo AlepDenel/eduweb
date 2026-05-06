@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { academic, auth, Course, Module, Resource } from "@/lib/api";
+import { academic, auth, Course, Module, quizApi, Quiz, Resource } from "@/lib/api";
 
-type ModuleWithResources = Module & { resources: Resource[] };
+type ModuleWithResources = Module & { resources: Resource[]; quizzes: Quiz[] };
 
 export default function CourseDetailPage({ params }: { params: { course_id: string } }) {
   const router = useRouter();
@@ -34,15 +35,26 @@ export default function CourseDetailPage({ params }: { params: { course_id: stri
         const modulesData = await academic.getModules(course_id);
         const fetchedModules = modulesData.modules || [];
 
-        // 4. Fetch Resources for each module concurrently
+        // 4. Fetch Resources and quizzes for each module concurrently
         const modulesWithResources: ModuleWithResources[] = await Promise.all(
           fetchedModules.map(async (mod) => {
             try {
-              const resData = await academic.getResources(mod.id);
-              return { ...mod, resources: resData.resources || [] };
+              const [resData, quizzesData] = await Promise.all([
+                academic.getResources(mod.id),
+                quizApi.getQuizzesForModule(mod.id).catch((e) => {
+                  console.error(`Failed to fetch quizzes for module ${mod.id}`, e);
+                  return { status: "error", module_id: mod.id, quizzes: [] };
+                }),
+              ]);
+
+              return {
+                ...mod,
+                resources: resData.resources || [],
+                quizzes: quizzesData.quizzes || [],
+              };
             } catch (e) {
-              console.error(`Failed to fetch resources for module ${mod.id}`, e);
-              return { ...mod, resources: [] };
+              console.error(`Failed to fetch module content for module ${mod.id}`, e);
+              return { ...mod, resources: [], quizzes: [] };
             }
           })
         );
@@ -141,6 +153,41 @@ export default function CourseDetailPage({ params }: { params: { course_id: stri
                 </div>
 
                 <div className="pl-10 space-y-4 border-l border-neutral-200 ml-3">
+                  {mod.quizzes.length > 0 && (
+                    <div className="space-y-3">
+                      {mod.quizzes.map((quiz) => (
+                        <div
+                          key={quiz.id}
+                          className="bg-white p-5 rounded-xl border border-neutral-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="text-xs font-bold tracking-wider uppercase bg-neutral-100 text-neutral-600 px-2.5 py-1 rounded-md">
+                                Kuiz
+                              </span>
+                              <h3 className="text-lg font-medium text-neutral-800">{quiz.title}</h3>
+                            </div>
+
+                            {quiz.description && (
+                              <p className="text-neutral-600 text-sm leading-relaxed">
+                                {quiz.description}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="shrink-0">
+                            <Link
+                              href={`/courses/${course_id}/quiz/${quiz.id}`}
+                              className="inline-flex px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 shadow-sm border bg-white text-neutral-700 border-neutral-200 hover:border-neutral-900 hover:text-neutral-900"
+                            >
+                              Buka Kuiz
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {mod.resources.length === 0 ? (
                     <p className="text-sm text-neutral-400 italic">Tiada bahan pembelajaran.</p>
                   ) : (
