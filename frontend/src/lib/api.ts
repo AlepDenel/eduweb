@@ -280,6 +280,12 @@ export interface QuizAttemptResponse {
   quiz_attempt: QuizAttempt;
 }
 
+export interface QuizzesForModuleResponse {
+  status: string;
+  module_id: number;
+  quizzes: Quiz[];
+}
+
 export interface QuestionsResponse {
   status: string;
   quiz_id: number;
@@ -320,6 +326,9 @@ export interface QuizResult {
 }
 
 export const quizApi = {
+  getQuizzesForModule: async (module_id: string | number): Promise<QuizzesForModuleResponse> =>
+    api.get<QuizzesForModuleResponse>(`/modules/${module_id}/quizzes`),
+
   getQuiz: async (quiz_id: string | number): Promise<{ status: string; quiz: Quiz }> =>
     api.get<{ status: string; quiz: Quiz }>(`/quizzes/${quiz_id}`),
 
