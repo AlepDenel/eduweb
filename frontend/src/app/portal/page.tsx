@@ -38,7 +38,7 @@ export default function PortalPage() {
           ordersApi.getOrders()
         ]);
 
-        setCourses(progressRes.progress_overview || progressRes.courses || []);
+        setCourses(progressRes.courses || []);
         setSavedResources(savedRes.saved_resources || []);
         
         // Sort orders by latest first
@@ -135,7 +135,7 @@ export default function PortalPage() {
                     <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000"
-                        style={{ width: \`\${course.progress_percentage}%\` }}
+                        style={{ width: `${course.progress_percentage}%` }}
                       ></div>
                     </div>
                     <p className="text-xs text-slate-400 mt-3 font-medium text-right">
@@ -144,7 +144,7 @@ export default function PortalPage() {
                   </div>
 
                   <a 
-                    href={\`/courses/\${course.course_id}\`}
+                    href={`/courses/${course.course_id}`}
                     className="w-full py-3 bg-slate-50 text-slate-700 hover:bg-indigo-600 hover:text-white rounded-xl text-sm font-bold text-center transition-colors"
                   >
                     Sambung Belajar
@@ -180,7 +180,7 @@ export default function PortalPage() {
                           </span>
                         </div>
                         <a 
-                          href={\`/resources/\${item.resource_id}\`} // Adjust link based on routing logic
+                          href={`/resources/${item.resource_id}`} // Adjust link based on routing logic
                           className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
                         >
                           →
@@ -232,13 +232,11 @@ export default function PortalPage() {
                             {Number(order.total_amount).toFixed(2)}
                           </td>
                           <td className="py-4 px-6">
-                            <span className={\`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider \${
-                              order.status === 'completed' || order.status === 'paid'
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                              order.status === 'completed'
                                 ? 'bg-emerald-100 text-emerald-700'
-                                : order.status === 'pending'
-                                  ? 'bg-amber-100 text-amber-700'
-                                  : 'bg-slate-100 text-slate-700'
-                            }\`}>
+                                : 'bg-slate-100 text-slate-700'
+                            }`}>
                               {order.status}
                             </span>
                           </td>

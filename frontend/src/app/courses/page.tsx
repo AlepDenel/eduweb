@@ -103,7 +103,7 @@ export default function CoursesPage() {
                 </h2>
                 <p className="text-slate-600 leading-relaxed mb-8 flex-1">
                   {course.description.length > 120 
-                    ? \`\${course.description.substring(0, 120)}...\` 
+                    ? `${course.description.substring(0, 120)}...` 
                     : course.description}
                 </p>
 
@@ -112,7 +112,7 @@ export default function CoursesPage() {
                     Added: {new Date(course.created_at).toLocaleDateString()}
                   </div>
                   <a 
-                    href={\`/courses/\${course.id}\`} 
+                    href={`/courses/${course.id}`} 
                     className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-md shadow-blue-500/20"
                   >
                     View Details

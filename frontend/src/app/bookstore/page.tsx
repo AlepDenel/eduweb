@@ -46,7 +46,7 @@ export default function BookstorePage() {
       await bookstore.addToCart({ book_id, quantity: 1 });
       alert("Buku berjaya ditambah ke dalam troli (Cart)!");
     } catch (err: any) {
-      alert(\`Ralat: \${err.message || "Gagal menambah ke troli."}\`);
+      alert(`Ralat: ${err.message || "Gagal menambah ke troli."}`);
     } finally {
       setProcessingId(null);
     }
@@ -59,7 +59,7 @@ export default function BookstorePage() {
       await bookstore.checkout();
       alert("Pembayaran berjaya! Terima kasih kerana sudi membeli belah.");
     } catch (err: any) {
-      alert(\`Ralat Checkout: \${err.message || "Gagal melakukan pembayaran."}\`);
+      alert(`Ralat Checkout: ${err.message || "Gagal melakukan pembayaran."}`);
     } finally {
       setIsCheckingOut(false);
     }
@@ -87,11 +87,11 @@ export default function BookstorePage() {
             <button
               onClick={handleCheckout}
               disabled={isCheckingOut}
-              className={\`px-6 py-3 rounded-xl font-bold shadow-md transition-all \${
+              className={`px-6 py-3 rounded-xl font-bold shadow-md transition-all ${
                 isCheckingOut 
                   ? "bg-slate-300 text-slate-500 cursor-not-allowed" 
                   : "bg-emerald-500 hover:bg-emerald-600 text-white hover:shadow-lg hover:-translate-y-0.5"
-              }\`}
+              }`}
             >
               {isCheckingOut ? "Memproses..." : "🛒 Checkout Semua Item"}
             </button>
@@ -136,7 +136,7 @@ export default function BookstorePage() {
                 </p>
 
                 <p className="text-slate-600 text-sm leading-relaxed mb-6 flex-1 line-clamp-3">
-                  {book.description}
+                  Kategori: {book.category_name}
                 </p>
 
                 <div className="flex items-center justify-between mt-auto pt-6 border-t border-slate-100">
@@ -144,21 +144,21 @@ export default function BookstorePage() {
                     <p className="text-2xl font-black text-slate-900">
                       RM {Number(book.price).toFixed(2)}
                     </p>
-                    <p className={\`text-xs font-medium mt-1 \${book.stock_quantity > 0 ? "text-emerald-600" : "text-red-500"}\`}>
-                      {book.stock_quantity > 0 ? \`Stok: \${book.stock_quantity} unit\` : "Kehabisan Stok"}
+                    <p className={`text-xs font-medium mt-1 ${book.stock_quantity > 0 ? "text-emerald-600" : "text-red-500"}`}>
+                      {book.stock_quantity > 0 ? `Stok: ${book.stock_quantity} unit` : "Kehabisan Stok"}
                     </p>
                   </div>
 
                   <button
                     onClick={() => handleAddToCart(book.id)}
                     disabled={processingId === book.id || book.stock_quantity <= 0}
-                    className={\`px-5 py-2.5 rounded-xl text-sm font-bold transition-all \${
+                    className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
                       book.stock_quantity <= 0 
                         ? "bg-slate-100 text-slate-400 cursor-not-allowed"
                         : processingId === book.id
                           ? "bg-emerald-100 text-emerald-500 cursor-wait"
                           : "bg-slate-900 text-white hover:bg-slate-800 shadow-md hover:shadow-lg"
-                    }\`}
+                    }`}
                   >
                     {book.stock_quantity <= 0 
                       ? "Habis" 

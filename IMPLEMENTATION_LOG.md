@@ -351,3 +351,141 @@ Correction note:
 8) Runtime behavior impact: None
 9) Backward compatibility: Fully preserved
 10) Verification status: Verified and locked
+
+## Step 43 - Frontend Integration Rescue and Build Verification
+Branch: codex/frontend-contract-rescue
+Status at time of log: Build verification passed; browser/system testing pending.
+
+### 1. Objective
+The objective of this step was to correct confirmed frontend/backend integration blockers so the frontend could safely consume the locked backend API contract without requiring backend changes.
+
+### 2. Background
+Frontend files had been pushed before formal integration validation. A validation pass against the locked backend contract identified multiple issues, including API response mismatches, malformed route structure, conflicting frontend architecture artifacts, and build-related problems that prevented safe integration.
+
+### 3. Scope Control
+- Backend files were not changed.
+- Database and schema files were not changed.
+- No new features were added.
+- No UI redesign was intended.
+- Changes were limited to frontend integration repair, route cleanup, API contract alignment, and build correctness.
+
+### 4. Issues Identified
+- Duplicate frontend architecture conflict
+- Malformed duplicate quiz route
+- Quiz attempt response mismatch
+- Quiz attempt timestamp mismatch
+- Quiz grading/result field mismatch
+- Forum wrapper mismatch
+- Bookstore book object mismatch
+- Saved-resource field mismatch
+- Order status assumptions not established by the backend contract
+- Build/install environment issues
+- TypeScript request body build error in `frontend/src/lib/api.ts`
+
+### 5. Fixes Applied
+- The earlier duplicate frontend architecture issue was resolved by retaining the Next.js / TypeScript / Tailwind frontend structure and removing the conflicting vanilla SPA structure.
+- The malformed route file was deleted:
+  - `frontend/src/app/courses/[course_id/]/quiz/[quiz_id/]/page.tsx`
+- Quiz attempt API handling was aligned to backend `quiz_attempt` responses.
+- Quiz questions were fetched from the documented quiz/question endpoints instead of being assumed from the attempt endpoint.
+- Quiz attempt timestamp usage was corrected from `completed_at` to `submitted_at`.
+- Quiz grading/result handling was aligned to backend fields:
+  - `total_score`
+  - `correct_answers`
+  - `incorrect_answers`
+  - `results`
+- Forum thread response handling was corrected from `threads` to `forum_threads`.
+- Bookstore handling removed dependency on nonexistent `description`.
+- Book `price` handling was aligned with the backend serialized value format.
+- Saved resource handling was corrected from `saved_at` to `created_at` and `module_id`.
+- Undocumented order status assumptions `paid` and `pending` were removed.
+- TypeScript request body handling in `frontend/src/lib/api.ts` was corrected by converting unknown request bodies into valid `BodyInit` values before passing them into `fetch` request options.
+
+### 6. Files Changed
+- `frontend/src/lib/api.ts`
+- `frontend/src/app/bookstore/page.tsx`
+- `frontend/src/app/courses/[course_id]/page.tsx`
+- `frontend/src/app/courses/[course_id]/quiz/[quiz_id]/page.tsx`
+- `frontend/src/app/courses/page.tsx`
+- `frontend/src/app/forum/page.tsx`
+- `frontend/src/app/portal/page.tsx`
+- `frontend/src/components/Navbar.tsx`
+- Deleted malformed route file:
+  - `frontend/src/app/courses/[course_id/]/quiz/[quiz_id/]/page.tsx`
+
+### 7. Verification Performed
+- Static contract validation against:
+  - `FRONTEND_README.md`
+  - `PROJECT_HANDOFF_README.md`
+  - `DATABASE_README.md`
+  - backend route files
+- Malformed route tracking check
+- Dependency installation using:
+  - `npm ci --prefer-online`
+- Manual build verification using:
+  - `npm run build`
+- Successful Next.js build confirmation
+- Generated build output `frontend/.next/` was removed after build verification and was not included as a tracked project change.
+- Backend untouched confirmation
+- Git scope audit confirming changes were limited to expected frontend rescue files
+
+### 8. Remaining Verification Needed
+Browser and system-level testing is still required.
+
+Flows that still need verification:
+- login
+- course list/detail
+- quiz start/submit
+- forum list/create
+- bookstore list/cart/checkout
+- portal progress/saved resources/orders
+
+### 9. Current Status
+- Build verification passed
+- Browser/system testing is pending
+- The branch is not yet final merge-ready until browser/system testing and a final Git audit are completed
+
+## Step 43A - Quiz Attempt Resume and Submit Validation
+
+### 1. Objective
+- Validate and document the quiz attempt resume/submit correction after the frontend integration rescue.
+
+### 2. Reason for Change
+- Browser validation showed that reopening `/courses/4/quiz/4` did not resume existing in-progress attempt `#14`, which blocked quiz submit/results validation.
+
+### 3. Scope Control
+- Backend files were not changed.
+- Database/schema files were not changed.
+- No UI redesign was intended.
+- No new backend behavior was introduced.
+- The change was limited to frontend quiz lifecycle handling.
+
+### 4. Fix Summary
+- Quiz page now checks for existing attempts for the current quiz.
+- Existing `in_progress` attempt for the logged-in user is resumed.
+- Saved answers are loaded and restored where available.
+- Duplicate attempt creation is avoided when an in-progress attempt already exists.
+- New attempt creation remains available only when no in-progress attempt exists.
+
+### 5. Validation Evidence
+- Student account: `student.validation@example.test`
+- Route: `/courses/4/quiz/4`
+- Attempt used: `#14`
+- Attempt resumed successfully.
+- Question UI appeared.
+- Saved answer state was restored.
+- Submit completed successfully.
+- Attempt status changed from `in_progress` to `submitted`.
+- No duplicate attempt was created.
+- Results remain unavailable until grading, which is expected backend lifecycle behavior.
+
+### 6. Verification Status
+- Browser validation: Passed for quiz resume and submit lifecycle.
+- Manual build: Executed by user after the fix.
+- Final merge readiness: Still pending final Git audit and decision on remaining untested/limited flows.
+
+### 7. Remaining Limitations
+- Quiz results after grading were not tested because the grading path was not executed.
+- Bookstore cart/checkout is still blocked by zero stock unless approved test stock or an Admin path is provided.
+- Saved-resource creation still lacks a visible frontend save path.
+- Admin and Moderator flows are not covered by this Student-side validation.
