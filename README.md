@@ -1,6 +1,6 @@
-# EduTech Education Website
+# EduWeb Education Website
 
-EduTech is a full-stack education website developed for an academic group project. The system supports undergraduate students by combining learning resources, quizzes, student progress tracking, saved resources, discussion forum features, bookstore browsing, cart/order history, moderation support, and a read-only Admin dashboard.
+EduWeb is a full-stack education website developed for an academic group project. The system supports undergraduate students by combining learning resources, quizzes, student progress tracking, saved resources, discussion forum features, bookstore browsing, cart/order history, moderation support, and a read-only Admin dashboard.
 
 The backend has been verified and locked. The frontend backbone has been integrated against the verified backend contract using Next.js and TypeScript.
 
