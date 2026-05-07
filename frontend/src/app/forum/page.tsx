@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth, forum, ForumThread } from "@/lib/api";
@@ -171,7 +172,12 @@ export default function ForumPage() {
                   className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 hover:border-stone-300 transition-colors group"
                 >
                   <h3 className="text-xl font-medium text-stone-900 mb-2 leading-tight">
-                    {thread.title}
+                    <Link
+                      href={`/forum/${thread.id}`}
+                      className="hover:text-stone-700 transition-colors"
+                    >
+                      {thread.title}
+                    </Link>
                   </h3>
                   <div className="text-sm text-stone-400 mb-4 flex items-center gap-2">
                     <span className="bg-stone-100 px-2.5 py-0.5 rounded text-xs font-medium text-stone-600">
@@ -191,6 +197,14 @@ export default function ForumPage() {
                   <p className="text-stone-600 leading-relaxed whitespace-pre-wrap">
                     {thread.content}
                   </p>
+                  <div className="mt-5 pt-4 border-t border-stone-100">
+                    <Link
+                      href={`/forum/${thread.id}`}
+                      className="text-sm font-medium text-stone-700 hover:text-stone-900 transition-colors"
+                    >
+                      View Discussion →
+                    </Link>
+                  </div>
                 </article>
               ))}
             </div>

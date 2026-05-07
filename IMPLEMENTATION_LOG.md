@@ -489,3 +489,545 @@ Flows that still need verification:
 - Bookstore cart/checkout is still blocked by zero stock unless approved test stock or an Admin path is provided.
 - Saved-resource creation still lacks a visible frontend save path.
 - Admin and Moderator flows are not covered by this Student-side validation.
+
+## Step 44 - Frontend Backbone Patch 1: Forum Thread Detail, Replies, and Reporting
+
+### 1. Step Classification
+- Area: Frontend
+- Phase: Frontend Backbone Completion Pass
+- Patch type: frontend-only integration/backbone extension
+- Backend status: locked and untouched
+- Validation status: implementation completed; build validation passed; browser/system validation pending
+
+### 2. Objective
+- Expose existing verified forum backend capabilities through frontend thread detail, reply, and reporting UI without changing backend behavior.
+
+### 3. Requirement Coverage
+- This patch supports the forum/Q&A requirement by adding:
+  - thread detail access
+  - replies/posts display
+  - reply creation
+  - post reporting/unreporting
+- This patch does not provide full moderation coverage; Moderator review and moderation actions remain a later patch.
+
+### 4. Scope Control
+- frontend-only change
+- backend untouched
+- database/schema untouched
+- API contracts preserved
+- documented backend endpoints only
+- existing forum visual language preserved
+- no Moderator/Admin UI implemented in this patch
+- no unrelated frontend pages changed
+
+### 5. Backend Contract Used
+- `GET /api/forum-threads/<thread_id>`
+- `GET /api/forum-threads/<thread_id>/posts`
+- `POST /api/forum-threads/<thread_id>/posts`
+- `GET /api/forum-posts/<post_id>/report-status`
+- `POST /api/forum-posts/<post_id>/report`
+- `DELETE /api/forum-posts/<post_id>/report`
+- These were existing verified backend routes.
+- No backend route was added or modified.
+
+### 6. Frontend Changes
+- forum API helpers and supporting forum types added in `frontend/src/lib/api.ts`
+- thread links added in `frontend/src/app/forum/page.tsx`
+- new thread detail page added at `frontend/src/app/forum/[thread_id]/page.tsx`
+
+### 7. Validation Status
+- implementation completed locally
+- build validation passed
+- manual `npm run build` passed
+- Next.js recognized `/forum/[thread_id]` as a dynamic route
+- generated `frontend/.next/` was removed after build
+- browser/system validation pending
+- no commit yet
+- no push yet
+- no PR yet
+
+### 8. Remaining Validation Needed
+- open `/forum`
+- open one thread detail page
+- submit one test reply
+- report one visible post
+- unreport the same post if safe
+- confirm no console/network/runtime errors
+- confirm backend/database/schema files remain untouched
+- confirm Git diff scope contains only expected frontend files and this documentation entry
+
+### 9. Current Status
+- Patch implemented locally
+- Documentation entry added
+- Build validation passed
+- Pending browser/system validation
+- Not ready for commit/PR until validation passes
+
+## Step 45 - Frontend Backbone Patch 2: Moderator Report Review and Post Moderation
+
+### 1. Step Classification
+- Area: Frontend
+- Phase: Frontend Backbone Completion Pass
+- Patch type: frontend-only moderation backbone
+- Backend status: locked and untouched
+- Validation status: implementation completed; build/browser validation pending
+
+### 2. Objective
+- Expose existing verified forum moderation backend routes through a minimal Moderator/Admin report review page.
+
+### 3. Requirement Coverage
+- Supports moderation tools requirement by adding:
+  - report review list
+  - hide post action
+  - unhide post action
+  - moderation remove action
+- Full Admin dashboard coverage is not part of this patch.
+
+### 4. Scope Control
+- frontend-only change
+- backend untouched
+- database/schema untouched
+- API contracts preserved
+- documented backend endpoints only
+- no unrelated pages changed
+- no full Admin dashboard implemented
+
+### 5. Backend Contract Used
+- `GET /api/forum-reports`
+- `POST /api/forum-posts/<post_id>/hide`
+- `POST /api/forum-posts/<post_id>/unhide`
+- `DELETE /api/forum-posts/<post_id>/moderation-remove`
+- Existing verified backend routes only
+- No backend route was added or modified
+
+### 6. Frontend Changes
+- moderation API helpers and types added in `frontend/src/lib/api.ts`
+- new moderator report page added at `frontend/src/app/moderation/reports/page.tsx`
+
+### 7. Validation Status
+- implementation completed locally
+- build validation passed
+- manual `npm run build` passed
+- Next.js recognized `/moderation/reports` as a static route
+- generated `frontend/.next/` was removed after build
+- browser/system validation pending
+- no commit yet
+- no push yet
+- no PR yet
+
+### 8. Remaining Validation Needed
+- run `npm run build`
+- remove generated `frontend/.next/`
+- log in as Moderator/Admin
+- open `/moderation/reports`
+- verify reports list or safe empty state
+- test one safe hide/unhide action if report/post data exists
+- test remove only if explicitly safe
+- confirm Student account receives access denied
+- confirm no console/network/runtime errors
+
+### 9. Current Status
+- implemented locally
+- build validation passed
+- pending browser/system validation
+- not ready for commit/PR until validation passes
+
+## Step 46 - Frontend Backbone Patch 3: Saved Resources Save and Unsave
+
+### 1. Step Classification
+- Area: Frontend
+- Phase: Frontend Backbone Completion Pass
+- Patch type: frontend-only saved-resources backbone
+- Backend status: locked and untouched
+- Validation status: implementation completed; build/browser validation pending
+
+### 2. Objective
+- Expose existing verified saved-resource backend routes through visible save/unsave controls for course resources.
+
+### 3. Requirement Coverage
+- Supports Student Portal personalized features by adding:
+  - saved status checking
+  - save resource action
+  - unsave resource action
+  - portal saved-resources usefulness through actual creation path
+
+### 4. Scope Control
+- frontend-only change
+- backend untouched
+- database/schema untouched
+- API contracts preserved
+- documented backend endpoints only
+- no unrelated pages changed
+- no redesign
+- `Tanda Selesai` progress behavior preserved
+
+### 5. Backend Contract Used
+- `GET /api/saved-resources/me`
+- `GET /api/resources/<resource_id>/saved`
+- `POST /api/resources/<resource_id>/save`
+- `DELETE /api/resources/<resource_id>/save`
+- existing verified backend routes only
+- no backend route added or modified
+
+### 6. Frontend Changes
+- saved-resources API helpers and types added or extended in `frontend/src/lib/api.ts`
+- save/unsave controls added to course detail resource cards in `frontend/src/app/courses/[course_id]/page.tsx`
+- portal page changed only if actually modified
+
+### 7. Validation Status
+- implementation completed locally
+- build validation passed
+- manual `npm run build` passed
+- generated `frontend/.next/` was removed after build
+- browser/system validation pending
+- no commit yet
+- no push yet
+- no PR yet
+
+### 8. Remaining Validation Needed
+- run `npm run build`
+- remove generated `frontend/.next/`
+- log in as Student
+- open a course detail page with resources
+- save one resource
+- confirm UI changes to saved state
+- open portal and confirm saved resource appears
+- unsave the same resource if safe
+- confirm no console/network/runtime errors
+
+### 9. Current Status
+- implemented locally
+- build validation passed
+- pending browser/system validation
+- not ready for commit/PR until validation passes
+
+## Step 47 - Frontend Backbone Patch 4: Commerce Catalogue, Cart, Checkout, and Orders
+
+### 1. Step Classification
+- Area: Frontend
+- Phase: Frontend Backbone Completion Pass
+- Patch type: frontend-only commerce backbone
+- Backend status: locked and untouched
+- Validation status: implementation completed; build/browser validation pending
+
+### 2. Objective
+- Expose existing verified bookstore, cart, checkout, and order backend routes through minimal frontend skeleton pages and controls.
+
+### 3. Requirement Coverage
+- This patch supports:
+  - bookstore catalogue
+  - category filtering
+  - search functionality
+  - book detail access
+  - cart management
+  - checkout path
+  - order history/detail
+
+### 4. Scope Control
+- frontend-only change
+- backend untouched
+- database/schema untouched
+- API contracts preserved
+- documented backend endpoints only
+- no Admin inventory UI implemented
+- no unrelated pages changed
+- no redesign
+- zero-stock data handled safely
+
+### 5. Backend Contract Used
+- `GET /api/book-categories`
+- `GET /api/books`
+- `GET /api/books?category_id=<id>`
+- `GET /api/books?search=<term>`
+- `GET /api/books/<book_id>`
+- `GET /api/cart`
+- `POST /api/cart/items`
+- `PUT /api/cart/items/<item_id>`
+- `DELETE /api/cart/items/<item_id>`
+- `POST /api/checkout`
+- `GET /api/orders`
+- `GET /api/orders/<order_id>`
+- existing verified backend routes only
+- no backend route added or modified
+
+### 6. Frontend Changes
+- `frontend/src/lib/api.ts`
+- `frontend/src/app/bookstore/page.tsx`
+- `frontend/src/app/bookstore/[book_id]/page.tsx`
+- `frontend/src/app/cart/page.tsx`
+- `frontend/src/app/orders/page.tsx`
+- `frontend/src/app/orders/[order_id]/page.tsx`
+
+### 7. Validation Status
+- implementation completed locally
+- build validation passed
+- manual `npm run build` passed
+- Next.js recognized the commerce routes:
+  - `/bookstore/[book_id]`
+  - `/cart`
+  - `/orders`
+  - `/orders/[order_id]`
+- generated `frontend/.next/` was removed after build
+- browser/system validation pending
+- no commit yet
+- no push yet
+- no PR yet
+
+### 8. Remaining Validation Needed
+- run `npm run build`
+- remove generated `frontend/.next/`
+- log in as Student
+- open `/bookstore`
+- test search/filter UI
+- open one book detail page
+- add one in-stock book to cart if available
+- open `/cart`
+- update/remove item if cart item exists
+- checkout only if cart/stock state safely allows it
+- open `/orders`
+- open one order detail if available
+- confirm no console/network/runtime errors
+
+### 9. Current Status
+- implemented locally
+- build validation passed
+- pending browser/system validation
+- not ready for commit/PR until validation passes
+
+## Step 47A - Frontend Backbone Runtime Stabilization: Loading State Fixes
+
+### 1. Step Classification
+- Area: Frontend
+- Phase: Frontend Backbone Completion Pass
+- Patch type: frontend-only corrective runtime stabilization
+- Backend status: locked and untouched
+- Validation status: implementation completed; build validation passed; focused browser validation passed for previously stuck loading routes; broader full-system validation pending
+
+### 2. Objective
+- Fix browser smoke validation blockers where `/cart`, `/orders`, `/portal`, and `/moderation/reports` remained stuck in loading states.
+
+### 3. Reason for Change
+- Browser smoke validation after Steps 44 to 47 showed several pages loaded but did not resolve beyond loading text.
+- This blocked continuation to Admin Read-Only Dashboard Shell.
+
+### 4. Scope Control
+- frontend-only change
+- backend untouched
+- database/schema untouched
+- API contracts preserved
+- documented backend endpoints only
+- no redesign
+- no new feature module added
+- no Admin dashboard implemented
+
+### 5. Frontend Changes
+- `frontend/src/app/cart/page.tsx`
+- `frontend/src/app/orders/page.tsx`
+- `frontend/src/app/portal/page.tsx`
+- `frontend/src/app/moderation/reports/page.tsx`
+- `IMPLEMENTATION_LOG.md`
+
+### 6. Runtime Behavior Corrected
+- `/cart`
+- `/orders`
+- `/portal`
+- `/moderation/reports`
+
+### 7. Validation Status
+- implementation completed locally
+- build validation passed
+- manual `npm run build` passed
+- focused browser validation passed for the previously stuck loading routes
+- manual Chrome validation was used because Codex Browser plugin was unavailable
+- `/cart` resolved to empty cart state
+- `/orders` resolved to empty order history state
+- `/portal` rendered progress, saved resources, and orders sections
+- `/moderation/reports` resolved to Student access denied
+- no visible app console errors
+- no runtime crash
+- broader full-system validation pending
+- no commit/push/PR yet
+
+### 8. Remaining Validation Needed
+- actual cart mutation
+- checkout
+- order detail with existing order data
+- Moderator/Admin moderation actions
+- confirm no console/network/runtime errors during broader flow validation
+- confirm backend/database/schema files remain untouched
+
+### 9. Current Status
+- implemented locally
+- build validation passed
+- focused browser validation passed for the previously stuck loading routes
+- broader full-system validation pending
+- not ready for commit/PR until validation passes
+
+## Step 48 - Frontend Backbone Patch 5: Admin Read-Only Dashboard Shell
+
+### 1. Step Classification
+- Area: Frontend
+- Phase: Frontend Backbone Completion Pass
+- Patch type: frontend-only Admin read-only backbone
+- Backend status: locked and untouched
+- Validation status: implementation completed; build validation passed; browser/system validation pending
+
+### 2. Objective
+- Expose existing verified Admin backend read capabilities through minimal read-only frontend dashboard pages.
+
+### 3. Requirement Coverage
+- This patch supports:
+  - Admin management visibility
+  - role-based Admin access
+  - user oversight
+  - academic content oversight
+  - bookstore inventory oversight
+  - order review oversight
+- Full Admin CRUD is not implemented in this patch.
+- Destructive actions are intentionally excluded.
+
+### 4. Scope Control
+- frontend-only change
+- backend untouched
+- database/schema untouched
+- API contracts preserved
+- documented backend endpoints only
+- read-only Admin pages only
+- no create/update/delete actions
+- no redesign
+- no unrelated pages changed
+- Navbar not modified
+
+### 5. Backend Contract Used
+- `GET /api/admin/users`
+- `GET /api/admin/courses`
+- `GET /api/admin/courses/<course_id>/modules`
+- `GET /api/admin/modules/<module_id>/resources`
+- `GET /api/admin/modules/<module_id>/quizzes`
+- `GET /api/admin/quizzes/<quiz_id>/questions`
+- `GET /api/admin/questions/<question_id>/options`
+- `GET /api/admin/categories`
+- `GET /api/admin/books`
+- `GET /api/admin/orders`
+- existing verified backend routes only
+- no backend route added or modified
+
+### 6. Frontend Changes
+- `frontend/src/lib/api.ts`
+- `frontend/src/lib/adminAuth.ts`
+- `frontend/src/app/admin/page.tsx`
+- `frontend/src/app/admin/users/page.tsx`
+- `frontend/src/app/admin/academic/page.tsx`
+- `frontend/src/app/admin/bookstore/page.tsx`
+- `frontend/src/app/admin/orders/page.tsx`
+- `IMPLEMENTATION_LOG.md`
+
+### 7. Validation Status
+- implementation completed locally
+- build validation passed
+- manual `npm run build` passed
+- Next.js recognized the Admin routes:
+  - `/admin`
+  - `/admin/users`
+  - `/admin/academic`
+  - `/admin/bookstore`
+  - `/admin/orders`
+- generated `frontend/.next/` was removed after build
+- manual browser validation passed for Student access-denied and Admin read-only shell routes
+- manual Chrome validation was used because Codex Browser plugin was unavailable
+- Student received access denied on all Admin routes
+- Admin loaded `/admin`, `/admin/users`, `/admin/academic`, `/admin/bookstore`, and `/admin/orders`
+- no infinite loading
+- no visible app console errors
+- no runtime crash
+- read-only scope preserved
+- no destructive actions performed
+- broader full-system validation pending
+- no commit/push/PR yet
+
+### 8. Remaining Validation Needed
+- deeper Admin data edge cases
+- full cross-role regression
+- final full-system validation before PR/merge
+- confirm backend/database/schema files remain untouched
+
+### 9. Current Status
+- implemented locally
+- build validation passed
+- manual browser validation passed for Student access-denied and Admin read-only shell routes
+- broader full-system validation pending
+- not ready for commit/PR until validation passes
+
+## Step 48B - Frontend Auth UX Patch: Visible Logout and Role-Aware Session Display
+
+### 1. Step Classification
+- Area: Frontend
+- Phase: Frontend Backbone Completion Pass
+- Patch type: frontend-only auth UX correction
+- Backend status: locked and untouched
+- Validation status: implementation completed; build/browser validation pending
+
+### 2. Objective
+- Add visible logout and minimal role-aware session display so role-based demo/testing can be performed without console commands.
+
+### 3. Reason for Change
+- Final manual smoke validation revealed that the frontend lacked a visible logout control.
+- Logout is basic required UX for a role-authenticated system and is needed to switch between Student/Admin/Moderator validation sessions.
+
+### 4. Scope Control
+- frontend-only change
+- backend untouched
+- database/schema untouched
+- API contracts preserved
+- existing backend logout route only
+- no backend auth changes
+- no role-permission changes
+- no redesign
+- no unrelated pages changed
+
+### 5. Backend Contract Used
+- `POST /api/auth/logout` through the existing frontend API rewrite/helper convention
+- existing verified backend route only
+- no backend route added or modified
+
+### 6. Frontend Changes
+- `frontend/src/app/layout.tsx`
+- `frontend/src/components/Navbar.tsx`
+- `IMPLEMENTATION_LOG.md`
+
+### 7. Security / Role Enforcement Note
+- Navbar role-aware visibility is a UX convenience only.
+- Actual role enforcement remains backend-side through session authentication and role-required backend routes.
+- Manual URL/API access is still protected by backend authorization.
+
+### 8. Validation Status
+- implementation completed locally
+- build validation pending
+- browser/system validation pending
+- A follow-up Navbar hook-order safety correction was applied.
+- The route-based Navbar hiding logic was adjusted so React hooks are called consistently.
+- Backend/database/schema remained untouched.
+- UI behavior remains the same.
+- Build/manual validation remains pending after this correction.
+- no commit/push/PR yet
+
+### 9. Remaining Validation Needed
+- run `npm run build`
+- remove generated `frontend/.next/`
+- log in as Student
+- confirm Navbar shows Student/session state and Logout
+- click Logout
+- confirm redirect to `/login`
+- confirm `/admin` does not expose Admin content after logout
+- log in as Admin
+- confirm Navbar shows Admin/session state and Logout
+- click Logout
+- confirm redirect to `/login`
+- confirm no console/network/runtime errors
+- confirm backend/database/schema files remain untouched
+
+### 10. Current Status
+- implemented locally
+- pending build checkpoint
+- pending browser/manual validation
+- not ready for commit/PR until validation passes
