@@ -12,6 +12,17 @@ import {
   Order 
 } from "@/lib/api";
 
+const REQUEST_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(message)), REQUEST_TIMEOUT_MS);
+    }),
+  ]);
+}
+
 export default function PortalPage() {
   const router = useRouter();
   const [courses, setCourses] = useState<CourseProgressSummary[]>([]);
@@ -24,28 +35,47 @@ export default function PortalPage() {
   useEffect(() => {
     const fetchPortalData = async () => {
       try {
-        // 1. Check Auth
-        const session = await auth.me();
+        const session = await withTimeout(auth.me(), "Portal request timed out.");
         if (!session.authenticated) {
           router.push("/login");
           return;
         }
 
-        // 2. Fetch all data concurrently
-        const [progressRes, savedRes, ordersRes] = await Promise.all([
-          portal.getProgressOverview({ status: "in_progress" }),
-          savedResourcesApi.getSavedResources(),
-          ordersApi.getOrders()
+        const [progressRes, savedRes, ordersRes] = await Promise.allSettled([
+          withTimeout(
+            portal.getProgressOverview({ status: "in_progress" }),
+            "Portal progress request timed out."
+          ),
+          withTimeout(
+            savedResourcesApi.getSavedResources(),
+            "Saved resources request timed out."
+          ),
+          withTimeout(ordersApi.getOrders(), "Portal orders request timed out.")
         ]);
 
-        setCourses(progressRes.courses || []);
-        setSavedResources(savedRes.saved_resources || []);
-        
-        // Sort orders by latest first
-        const sortedOrders = (ordersRes.orders || []).sort(
-          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-        setOrders(sortedOrders);
+        if (progressRes.status === "fulfilled") {
+          setCourses(progressRes.value.courses || []);
+        } else {
+          console.error("Failed to load portal progress overview", progressRes.reason);
+          setCourses([]);
+        }
+
+        if (savedRes.status === "fulfilled") {
+          setSavedResources(savedRes.value.saved_resources || []);
+        } else {
+          console.error("Failed to load saved resources", savedRes.reason);
+          setSavedResources([]);
+        }
+
+        if (ordersRes.status === "fulfilled") {
+          const sortedOrders = (ordersRes.value.orders || []).sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          setOrders(sortedOrders);
+        } else {
+          console.error("Failed to load portal orders", ordersRes.reason);
+          setOrders([]);
+        }
 
       } catch (err: any) {
         if (err.message === "You must log in before using this route.") {

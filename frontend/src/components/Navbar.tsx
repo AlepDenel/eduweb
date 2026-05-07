@@ -11,14 +11,24 @@ export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const hideNavbar = pathname === "/login" || pathname === "/register";
 
   useEffect(() => {
     const checkAuth = async () => {
+      if (hideNavbar) {
+        setIsAuthenticated(false);
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const session = await auth.me();
         setIsAuthenticated(session.authenticated);
         if (session.authenticated && session.user) {
           setUser(session.user);
+        } else {
+          setUser(null);
         }
       } catch (err) {
         setIsAuthenticated(false);
@@ -29,17 +39,18 @@ export default function Navbar() {
     };
 
     checkAuth();
-  }, [pathname]); // Re-check on route change if needed
+  }, [hideNavbar, pathname]); // Re-check on route change if needed
 
   const handleLogout = async () => {
     try {
       await auth.logout();
+    } catch (err: any) {
+      console.error("Logout request failed, clearing local session view anyway.", err);
+    } finally {
       setIsAuthenticated(false);
       setUser(null);
       router.push("/login");
       router.refresh();
-    } catch (err: any) {
-      alert(`Logout failed: ${err.message}`);
     }
   };
 
@@ -49,6 +60,18 @@ export default function Navbar() {
     { name: "Bookstore", href: "/bookstore" },
     { name: "Forum", href: "/forum" },
   ];
+
+  if (user?.role === "Moderator" || user?.role === "Admin") {
+    navLinks.push({ name: "Moderation", href: "/moderation/reports" });
+  }
+
+  if (user?.role === "Admin") {
+    navLinks.push({ name: "Admin", href: "/admin" });
+  }
+
+  if (hideNavbar) {
+    return null;
+  }
 
   return (
     <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 transition-all duration-300">
