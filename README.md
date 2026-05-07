@@ -1,8 +1,8 @@
 # EduTech Education Website
 
-EduTech is a full-stack education website developed for an academic group project. The system provides a student learning platform with course resources, quizzes, progress tracking, saved resources, discussion forum features, bookstore browsing, cart/order history, moderation support, and a read-only Admin dashboard.
+EduTech is a full-stack education website developed for an academic group project. The system supports undergraduate students by combining learning resources, quizzes, student progress tracking, saved resources, discussion forum features, bookstore browsing, cart/order history, moderation support, and a read-only Admin dashboard.
 
-The backend has been verified and locked, while the frontend backbone has been integrated against the verified backend contract using Next.js and TypeScript.
+The backend has been verified and locked. The frontend backbone has been integrated against the verified backend contract using Next.js and TypeScript.
 
 ## Tech Stack
 
@@ -39,8 +39,8 @@ Frontend route guards are used for user experience only. Actual access control i
 - User registration
 - User login
 - User logout
-- Session-based current user checking
-- Role-aware frontend navigation
+- Current-session checking
+- Role-aware navigation display
 
 ### Student Learning
 
@@ -102,3 +102,119 @@ backend/   Flask backend API, models, routes, and setup scripts
 frontend/  Next.js frontend application
 docs/      Project documentation and implementation references
 ```
+
+## Documentation
+
+Detailed project documentation is stored in the `docs/` folder:
+
+- [Database Reference](docs/DATABASE_README.md)
+- [Frontend Integration Contract](docs/FRONTEND_README.md)
+- [Project Handoff Guide](docs/PROJECT_HANDOFF_README.md)
+- [Implementation Log](docs/IMPLEMENTATION_LOG.md)
+
+## Backend Setup
+
+1. Go to the backend folder.
+
+```powershell
+cd backend
+```
+
+2. Create and activate a Python virtual environment.
+
+3. Install the backend dependencies.
+
+4. Create a local `.env` file using local credentials only.
+
+5. Create a local MySQL database.
+
+6. Run the verified database initialization scripts from the backend scripts folder in the documented order.
+
+7. Start the Flask backend server.
+
+Refer to the following documents for the full backend and database setup process:
+
+- [Database Reference](docs/DATABASE_README.md)
+- [Project Handoff Guide](docs/PROJECT_HANDOFF_README.md)
+
+## Frontend Setup
+
+1. Go to the frontend folder.
+
+```powershell
+cd frontend
+```
+
+2. Install frontend dependencies.
+
+```powershell
+npm install
+```
+
+3. Run the frontend development server.
+
+```powershell
+npm run dev
+```
+
+4. For production build validation, run:
+
+```powershell
+npm run build
+```
+
+The frontend uses the Next.js rewrite configuration to forward `/api/...` requests to the Flask backend during local development.
+
+## Local Development Notes
+
+Run the backend and frontend in separate terminals.
+
+Typical local URLs:
+
+```txt
+Backend:  http://127.0.0.1:5000
+Frontend: http://localhost:3000
+```
+
+The frontend expects the backend API to be available through the `/api` path. Session-based requests must preserve cookies.
+
+## Validation Status
+
+The frontend backbone integration has been validated against the locked backend contract.
+
+Validated areas:
+
+- Unauthenticated access behavior
+- Student login, session, logout, course, resource, quiz, progress, saved resource, forum, bookstore, cart, and order flows
+- Moderator access to moderation routes
+- Moderator denial from Admin routes
+- Admin access to read-only Admin routes
+- Admin access to moderation routes
+- Logout and session switching
+- Role-aware Navbar behavior
+- Backend, database, and schema files remained untouched during frontend integration
+
+Known validation caveats:
+
+- Checkout was not fully retested with a fresh in-stock cart item because the available bookstore item was out of stock.
+- Cart empty state and existing order history/detail were validated.
+- Moderation hide/unhide was validated.
+- Admin pages are intentionally read-only in the current frontend backbone.
+
+## Git Safety Notes
+
+Do not commit:
+
+- `.env`
+- Python virtual environments
+- `node_modules/`
+- `.next/`
+- build output
+- local logs
+- local database dumps
+
+Backend, database, and schema changes should only be made through approved implementation steps.
+
+## Current Project Status
+
+The backend is verified and locked. The frontend backbone is integrated and ready for UI/design polish, as long as future work preserves the backend contract and does not introduce unapproved backend, database, schema, or CRUD changes.
