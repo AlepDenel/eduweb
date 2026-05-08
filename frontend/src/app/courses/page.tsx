@@ -13,18 +13,15 @@ export default function CoursesPage() {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        // 1. Check if user is logged in
         const session = await auth.me();
         if (!session.authenticated) {
           router.push("/login");
-          return; // Stop execution
+          return;
         }
 
-        // 2. Fetch courses
         const data = await academic.getCourses();
         setCourses(data.courses || []);
       } catch (err: any) {
-        // If the API throws a 401 error directly, catch it and redirect
         if (err.message === "You must log in before using this route.") {
           router.push("/login");
         } else {
@@ -41,81 +38,93 @@ export default function CoursesPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
-        <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin"></div>
-        <p className="mt-4 text-slate-500 font-medium text-lg">Fetching available courses...</p>
+        <div className="w-10 h-10 border-2 border-slate-200 border-t-blue-600 rounded-full animate-spin" />
+        <p className="mt-4 text-slate-500 text-sm font-medium">Loading courses…</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
-      <div className="max-w-7xl mx-auto px-6 pt-12">
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
-          <div className="flex-1">
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2 text-slate-800 bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600">
-              Course Catalog
+    <div className="min-h-screen bg-slate-50 pb-20">
+      <div className="max-w-6xl mx-auto px-6 pt-10">
+
+        {/* Page Header */}
+        <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              Course Catalogue
             </h1>
-            <p className="text-lg text-slate-500 leading-relaxed max-w-2xl">
-              Discover top-tier educational content designed to elevate your skills.
+            <p className="text-slate-500 mt-1.5 text-sm leading-relaxed">
+              Explore available learning modules and start or continue a course.
             </p>
           </div>
-          <div className="w-full md:w-80">
-            <input 
-              type="text" 
-              placeholder="Search courses..." 
-              className="w-full px-5 py-3 rounded-xl border border-slate-200 bg-white text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          <div className="w-full md:w-72">
+            <input
+              type="text"
+              placeholder="Search courses…"
               disabled
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-400 placeholder:text-slate-400 shadow-sm cursor-not-allowed"
+              aria-label="Course search (not yet available)"
             />
           </div>
         </header>
 
-        {error ? (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-8 rounded-2xl text-center max-w-2xl mx-auto my-16 shadow-sm">
-            <p className="text-lg font-medium">{error}</p>
-            <button 
+        {/* Error */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-2xl text-sm mb-8">
+            <p className="font-semibold mb-2">Could not load courses</p>
+            <p>{error}</p>
+            <button
               onClick={() => window.location.reload()}
-              className="mt-4 px-6 py-2.5 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors shadow-sm"
+              className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors"
             >
               Try Again
             </button>
           </div>
-        ) : courses.length === 0 ? (
-          <div className="text-center p-16 md:p-24 bg-white rounded-3xl border border-dashed border-slate-300 max-w-4xl mx-auto shadow-sm">
-            <span className="text-6xl block mb-4">🔍</span>
-            <h3 className="text-2xl font-bold text-slate-800 mb-2">No Courses Found</h3>
-            <p className="text-slate-500 text-lg">We couldn't find any courses available at the moment. Please check back later.</p>
+        )}
+
+        {/* Empty State */}
+        {!error && courses.length === 0 && (
+          <div className="bg-white border border-dashed border-slate-300 rounded-2xl py-20 text-center">
+            <p className="text-3xl mb-3">📭</p>
+            <h3 className="text-base font-semibold text-slate-800">No Courses Found</h3>
+            <p className="text-sm text-slate-500 mt-1">
+              No courses are available at the moment. Please check back later.
+            </p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        )}
+
+        {/* Course Grid */}
+        {!error && courses.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map((course) => (
-              <div 
-                key={course.id} 
-                className="group bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl border border-slate-100 flex flex-col transition-all duration-300 hover:-translate-y-1"
+              <div
+                key={course.id}
+                className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col hover:border-blue-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
               >
-                <div className="mb-6">
-                  <span className="inline-block px-3.5 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold tracking-wide uppercase">
-                    Academic
-                  </span>
-                </div>
-                
-                <h2 className="text-2xl font-bold text-slate-900 mb-4 leading-tight group-hover:text-blue-600 transition-colors">
+                {/* Badge */}
+                <span className="inline-block self-start px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-semibold uppercase tracking-wide mb-4">
+                  Academic
+                </span>
+
+                <h2 className="text-base font-semibold text-slate-900 leading-snug mb-2">
                   {course.title}
                 </h2>
-                <p className="text-slate-600 leading-relaxed mb-8 flex-1">
-                  {course.description.length > 120 
-                    ? `${course.description.substring(0, 120)}...` 
+                <p className="text-sm text-slate-500 leading-relaxed flex-1">
+                  {course.description.length > 110
+                    ? `${course.description.substring(0, 110)}…`
                     : course.description}
                 </p>
 
-                <div className="mt-auto flex justify-between items-center border-t border-slate-100 pt-6">
-                  <div className="text-sm text-slate-400 font-medium">
-                    Added: {new Date(course.created_at).toLocaleDateString()}
-                  </div>
-                  <a 
-                    href={`/courses/${course.id}`} 
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-md shadow-blue-500/20"
+                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-xs text-slate-400">
+                    {new Date(course.created_at).toLocaleDateString()}
+                  </span>
+                  <a
+                    href={`/courses/${course.id}`}
+                    className="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-150"
                   >
-                    View Details
+                    View Course
                   </a>
                 </div>
               </div>

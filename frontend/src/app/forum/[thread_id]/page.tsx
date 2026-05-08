@@ -84,7 +84,7 @@ export default function ForumThreadDetailPage({
     setReplyError("");
 
     if (!replyContent.trim()) {
-      setReplyError("Sila masukkan balasan sebelum dihantar.");
+      setReplyError("Please enter a reply before submitting.");
       return;
     }
 
@@ -94,7 +94,7 @@ export default function ForumThreadDetailPage({
       setReplyContent("");
       await fetchThreadData();
     } catch (err: any) {
-      setReplyError(err.message || "Gagal menghantar balasan.");
+      setReplyError(err.message || "Failed to submit reply.");
     } finally {
       setIsSubmittingReply(false);
     }
@@ -112,7 +112,7 @@ export default function ForumThreadDetailPage({
         setReportReasons((current) => ({ ...current, [postId]: "" }));
         setReportFeedback((current) => ({
           ...current,
-          [postId]: response.message || "Laporan dibatalkan.",
+          [postId]: response.message || "Report cancelled.",
         }));
         return;
       }
@@ -121,7 +121,7 @@ export default function ForumThreadDetailPage({
       if (!reason) {
         setReportFeedback((current) => ({
           ...current,
-          [postId]: "Sila masukkan sebab laporan.",
+          [postId]: "Please enter a reason for the report.",
         }));
         return;
       }
@@ -130,12 +130,12 @@ export default function ForumThreadDetailPage({
       setReportStatus((current) => ({ ...current, [postId]: true }));
       setReportFeedback((current) => ({
         ...current,
-        [postId]: response.message || "Post berjaya dilaporkan.",
+        [postId]: response.message || "Post reported successfully.",
       }));
     } catch (err: any) {
       setReportFeedback((current) => ({
         ...current,
-        [postId]: err.message || "Gagal mengemas kini laporan.",
+        [postId]: err.message || "Failed to update report.",
       }));
     } finally {
       setReportingPostId(null);
@@ -144,25 +144,23 @@ export default function ForumThreadDetailPage({
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-stone-50">
-        <div className="w-10 h-10 border-2 border-stone-200 border-t-stone-800 rounded-full animate-spin"></div>
-        <p className="mt-4 text-stone-500 font-medium text-sm tracking-widest uppercase">
-          Memuatkan Perbincangan...
-        </p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
+        <div className="w-10 h-10 border-2 border-slate-200 border-t-blue-600 rounded-full animate-spin" />
+        <p className="mt-4 text-slate-500 text-sm font-medium">Loading discussion…</p>
       </div>
     );
   }
 
   if (error || !thread) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-stone-200 text-center max-w-xl w-full">
-          <p className="text-red-600 mb-6">{error || "Perbincangan tidak dijumpai."}</p>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center max-w-xl w-full">
+          <p className="text-red-600 mb-5 text-sm">{error || "Discussion not found."}</p>
           <button
             onClick={() => router.push("/forum")}
-            className="px-6 py-2.5 bg-stone-900 text-white rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors"
+            className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition-colors"
           >
-            Kembali ke Forum
+            Back to Forum
           </button>
         </div>
       </div>
@@ -170,51 +168,57 @@ export default function ForumThreadDetailPage({
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 font-sans text-stone-900 pb-24">
-      <header className="bg-white border-b border-stone-200 pt-16 pb-12 px-6">
+    <div className="min-h-screen bg-slate-50 pb-24">
+
+      {/* Thread Header */}
+      <header className="bg-white border-b border-slate-200 px-6 pt-10 pb-8">
         <div className="max-w-3xl mx-auto">
           <Link
             href="/forum"
-            className="text-stone-400 hover:text-stone-900 transition-colors text-sm font-medium mb-8 inline-flex items-center"
+            className="text-sm text-slate-400 hover:text-slate-700 font-medium transition-colors mb-6 inline-flex items-center gap-1"
           >
-            ← Kembali ke Forum
+            ← Back to Forum
           </Link>
-          <h1 className="text-4xl font-semibold tracking-tight text-stone-900 mb-3">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-3">
             {thread.title}
           </h1>
-          <p className="text-stone-600 leading-relaxed whitespace-pre-wrap">
+          <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
             {thread.content}
           </p>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 mt-12 space-y-10">
-        <section className="bg-white p-8 rounded-2xl shadow-sm border border-stone-200">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-medium text-stone-800">Balasan Perbincangan</h2>
-            <span className="text-sm text-stone-400">{posts.length} Balasan</span>
+      <main className="max-w-3xl mx-auto px-6 mt-8 space-y-8">
+
+        {/* Replies Section */}
+        <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-base font-semibold text-slate-900">Replies</h2>
+            <span className="text-xs text-slate-400 font-medium">
+              {posts.length} repl{posts.length !== 1 ? "ies" : "y"}
+            </span>
           </div>
 
           {posts.length === 0 ? (
-            <div className="text-center py-12 border border-dashed border-stone-300 rounded-xl">
-              <p className="text-stone-500">Belum ada balasan untuk perbincangan ini.</p>
+            <div className="text-center py-10 border border-dashed border-slate-300 rounded-xl">
+              <p className="text-sm text-slate-500">No replies yet. Be the first to respond!</p>
             </div>
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-4">
               {posts.map((post) => (
                 <article
                   key={post.id}
-                  className="border border-stone-200 rounded-2xl p-6 bg-stone-50"
+                  className="border border-slate-200 rounded-2xl p-5 bg-slate-50"
                 >
-                  <div className="text-sm text-stone-400 mb-4 flex items-center gap-2 flex-wrap">
-                    <span className="bg-white px-2.5 py-0.5 rounded text-xs font-medium text-stone-600 border border-stone-200">
-                      ID Pengguna: {post.user_id}
+                  <div className="flex items-center gap-2 text-xs text-slate-400 mb-3 flex-wrap">
+                    <span className="bg-white border border-slate-200 px-2 py-0.5 rounded font-medium text-slate-600">
+                      User #{post.user_id}
                     </span>
-                    <span>•</span>
+                    <span>·</span>
                     <time dateTime={post.created_at}>
                       {new Date(post.created_at).toLocaleDateString("ms-MY", {
                         year: "numeric",
-                        month: "long",
+                        month: "short",
                         day: "numeric",
                         hour: "2-digit",
                         minute: "2-digit",
@@ -222,13 +226,14 @@ export default function ForumThreadDetailPage({
                     </time>
                   </div>
 
-                  <p className="text-stone-700 leading-relaxed whitespace-pre-wrap mb-5">
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap mb-5">
                     {post.content}
                   </p>
 
-                  <div className="space-y-3 border-t border-stone-200 pt-4">
-                    <label className="block text-sm font-medium text-stone-600">
-                      Sebab Laporan
+                  {/* Report Controls */}
+                  <div className="border-t border-slate-200 pt-4 space-y-3">
+                    <label className="block text-xs font-medium text-slate-600">
+                      Report Reason
                     </label>
                     <textarea
                       value={reportReasons[post.id] || ""}
@@ -239,29 +244,29 @@ export default function ForumThreadDetailPage({
                         }))
                       }
                       rows={2}
-                      placeholder="Nyatakan sebab laporan jika kandungan tidak sesuai."
-                      className="w-full px-4 py-3 rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-stone-800 focus:border-transparent transition-colors text-stone-900 resize-y"
+                      placeholder="State the reason if content is inappropriate."
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow resize-y"
                     />
                     <div className="flex items-center justify-between gap-4 flex-wrap">
                       <button
                         type="button"
                         onClick={() => handleReportToggle(post.id)}
                         disabled={reportingPostId === post.id}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        className={`px-4 py-2 rounded-lg text-xs font-semibold transition-colors duration-150 ${
                           reportStatus[post.id]
-                            ? "bg-stone-200 text-stone-700 hover:bg-stone-300"
-                            : "bg-stone-900 text-white hover:bg-stone-800"
+                            ? "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                            : "bg-slate-900 text-white hover:bg-slate-800"
                         } ${reportingPostId === post.id ? "opacity-60 cursor-not-allowed" : ""}`}
                       >
                         {reportingPostId === post.id
-                          ? "Memproses..."
+                          ? "Processing…"
                           : reportStatus[post.id]
-                            ? "Batalkan Laporan"
-                            : "Laporkan Post"}
+                          ? "Cancel Report"
+                          : "Report Post"}
                       </button>
 
                       {reportFeedback[post.id] && (
-                        <p className="text-sm text-stone-500">{reportFeedback[post.id]}</p>
+                        <p className="text-xs text-slate-500">{reportFeedback[post.id]}</p>
                       )}
                     </div>
                   </div>
@@ -271,41 +276,46 @@ export default function ForumThreadDetailPage({
           )}
         </section>
 
-        <section className="bg-white p-8 rounded-2xl shadow-sm border border-stone-200">
-          <h2 className="text-xl font-medium mb-6 text-stone-800">Balas Perbincangan</h2>
+        {/* Reply Form */}
+        <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900 mb-5">Add a Reply</h2>
 
           {replyError && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-lg text-sm">
-              {replyError}
+            <div
+              role="alert"
+              className="mb-5 flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm"
+            >
+              <span className="mt-0.5 text-red-500 flex-shrink-0">⚠</span>
+              <span>{replyError}</span>
             </div>
           )}
 
-          <form onSubmit={handleCreateReply} className="space-y-5">
+          <form onSubmit={handleCreateReply} className="space-y-4">
             <div>
-              <label htmlFor="reply-content" className="block text-sm font-medium text-stone-600 mb-1.5">
-                Kandungan Balasan
+              <label htmlFor="reply-content" className="block text-sm font-medium text-slate-700 mb-1.5">
+                Your Reply
               </label>
               <textarea
                 id="reply-content"
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
-                placeholder="Tulis balasan anda di sini..."
+                placeholder="Write your reply here…"
                 rows={4}
                 disabled={isSubmittingReply}
-                className="w-full px-4 py-3 rounded-xl border border-stone-300 bg-stone-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-800 focus:border-transparent transition-colors text-stone-900 resize-y"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-400 transition-shadow resize-y"
               />
             </div>
             <div className="flex justify-end">
               <button
                 type="submit"
                 disabled={isSubmittingReply}
-                className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all shadow-sm ${
+                className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors duration-150 ${
                   isSubmittingReply
-                    ? "bg-stone-200 text-stone-500 cursor-not-allowed"
-                    : "bg-stone-900 text-white hover:bg-stone-800 hover:shadow"
+                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
                 }`}
               >
-                {isSubmittingReply ? "Menghantar..." : "Hantar Balasan"}
+                {isSubmittingReply ? "Submitting…" : "Submit Reply"}
               </button>
             </div>
           </form>

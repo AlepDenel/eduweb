@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/api"; // Assumes Next.js path alias is configured
+import { auth } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,13 +19,11 @@ export default function LoginPage() {
 
     try {
       await auth.login(email, password);
-      // Verify session immediately after login
       const session = await auth.me();
-      
+
       if (session.authenticated) {
-        // Redirect to homepage or portal on success
         router.push("/");
-        router.refresh(); // Force a refresh to update server components with new cookie
+        router.refresh();
       } else {
         setError("Login failed. Please check your credentials.");
       }
@@ -36,150 +35,91 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Welcome Back</h1>
-        <p style={styles.subtitle}>Log in to access your EduTech courses</p>
-        
-        {error && (
-          <div style={styles.errorAlert}>
-            {error}
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+
+        {/* Brand */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2.5 mb-6">
+            <span className="w-8 h-8 bg-blue-600 text-white rounded-md flex items-center justify-center text-xs font-bold">
+              EW
+            </span>
+            <span className="text-xl font-semibold text-slate-900 tracking-tight">EduWeb</span>
           </div>
-        )}
-
-        <form onSubmit={handleLogin} style={styles.form}>
-          <div style={styles.inputGroup}>
-            <label htmlFor="email" style={styles.label}>Email Address</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="student@example.com"
-              required
-              style={styles.input}
-              disabled={isLoading}
-            />
-          </div>
-
-          <div style={styles.inputGroup}>
-            <label htmlFor="password" style={styles.label}>Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              style={styles.input}
-              disabled={isLoading}
-            />
-          </div>
-
-          <button 
-            type="submit" 
-            style={{...styles.button, opacity: isLoading ? 0.7 : 1}}
-            disabled={isLoading}
-          >
-            {isLoading ? "Logging in..." : "Log In"}
-          </button>
-        </form>
-
-        <div style={styles.footer}>
-          <span>Don't have an account? </span>
-          <a href="/register" style={styles.link}>Register here</a>
+          <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
+          <p className="text-slate-500 mt-1.5 text-sm">Sign in to continue to your learning portal</p>
         </div>
+
+        {/* Card */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8">
+
+          {error && (
+            <div
+              role="alert"
+              className="mb-6 flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm"
+            >
+              <span className="mt-0.5 text-red-500 flex-shrink-0">⚠</span>
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-5" noValidate>
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-slate-700 mb-1.5"
+              >
+                Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="student@example.com"
+                required
+                disabled={isLoading}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-400 transition-shadow"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-slate-700 mb-1.5"
+              >
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                disabled={isLoading}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-400 transition-shadow"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-2.5 mt-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-semibold rounded-xl transition-colors duration-150 disabled:cursor-not-allowed"
+            >
+              {isLoading ? "Signing in…" : "Sign In"}
+            </button>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <p className="text-center text-sm text-slate-500 mt-6">
+          Don&apos;t have an account?{" "}
+          <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+            Register here
+          </Link>
+        </p>
       </div>
     </div>
   );
 }
-
-// Basic inline styling for a premium look without external CSS dependencies
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    minHeight: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F9FAFB",
-    padding: "1rem",
-    fontFamily: "system-ui, -apple-system, sans-serif"
-  },
-  card: {
-    backgroundColor: "#FFFFFF",
-    padding: "2.5rem",
-    borderRadius: "12px",
-    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
-    width: "100%",
-    maxWidth: "420px",
-    border: "1px solid #E5E7EB"
-  },
-  title: {
-    margin: "0 0 0.5rem 0",
-    fontSize: "1.75rem",
-    fontWeight: "700",
-    color: "#111827",
-    textAlign: "center"
-  },
-  subtitle: {
-    margin: "0 0 2rem 0",
-    fontSize: "0.95rem",
-    color: "#6B7280",
-    textAlign: "center"
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "1.25rem"
-  },
-  inputGroup: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.5rem"
-  },
-  label: {
-    fontSize: "0.875rem",
-    fontWeight: "500",
-    color: "#374151"
-  },
-  input: {
-    padding: "0.75rem 1rem",
-    borderRadius: "8px",
-    border: "1px solid #D1D5DB",
-    fontSize: "1rem",
-    transition: "border-color 0.2s, box-shadow 0.2s",
-    outline: "none"
-  },
-  button: {
-    marginTop: "0.5rem",
-    padding: "0.75rem",
-    backgroundColor: "#4F46E5",
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: "1rem",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "background-color 0.2s"
-  },
-  errorAlert: {
-    backgroundColor: "#FEF2F2",
-    color: "#B91C1C",
-    padding: "0.75rem",
-    borderRadius: "8px",
-    fontSize: "0.875rem",
-    marginBottom: "1.5rem",
-    border: "1px solid #F87171"
-  },
-  footer: {
-    marginTop: "2rem",
-    textAlign: "center",
-    fontSize: "0.875rem",
-    color: "#6B7280"
-  },
-  link: {
-    color: "#4F46E5",
-    textDecoration: "none",
-    fontWeight: "500"
-  }
-};

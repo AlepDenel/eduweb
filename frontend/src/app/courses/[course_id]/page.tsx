@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   academic,
@@ -13,6 +13,7 @@ import {
   Resource,
   savedResourcesApi,
 } from "@/lib/api";
+import Toast from "@/components/Toast";
 
 type ModuleWithResources = Module & { resources: Resource[]; quizzes: Quiz[] };
 type SavedStatusState = Record<number, boolean>;
@@ -32,14 +33,17 @@ export default function CourseDetailPage({ params }: { params: { course_id: stri
   const [savingStatus, setSavingStatus] = useState<SavedActionState>({});
   const [savedFeedback, setSavedFeedback] = useState<SavedFeedbackState>({});
 
+  // Toast
+  const [toast, setToast] = useState({ visible: false, message: "", type: "success" as "success" | "error" | "info" });
+  const showToast = (message: string, type: "success" | "error" | "info" = "success") =>
+    setToast({ visible: true, message, type });
+  const dismissToast = useCallback(() => setToast((t) => ({ ...t, visible: false })), []);
+
   useEffect(() => {
     const fetchCourseData = async () => {
       try {
         const session = await auth.me();
-        if (!session.authenticated) {
-          router.push("/login");
-          return;
-        }
+        if (!session.authenticated) { router.push("/login"); return; }
 
         const courseData = await academic.getCourse(course_id);
         setCourse(courseData.course);
@@ -52,24 +56,18 @@ export default function CourseDetailPage({ params }: { params: { course_id: stri
             try {
               const [resData, quizzesData] = await Promise.all([
                 academic.getResources(mod.id),
-                quizApi.getQuizzesForModule(mod.id).catch((quizError) => {
-                  console.error(`Failed to fetch quizzes for module ${mod.id}`, quizError);
+                quizApi.getQuizzesForModule(mod.id).catch((err) => {
+                  console.error(`Failed to fetch quizzes for module ${mod.id}`, err);
                   return { status: "error", module_id: mod.id, quizzes: [] };
                 }),
               ]);
-
-              return {
-                ...mod,
-                resources: resData.resources || [],
-                quizzes: quizzesData.quizzes || [],
-              };
-            } catch (moduleError) {
-              console.error(`Failed to fetch module content for module ${mod.id}`, moduleError);
+              return { ...mod, resources: resData.resources || [], quizzes: quizzesData.quizzes || [] };
+            } catch (err) {
+              console.error(`Failed to fetch module content for module ${mod.id}`, err);
               return { ...mod, resources: [], quizzes: [] };
             }
           })
         );
-
         setModules(modulesWithResources);
 
         const allResources = modulesWithResources.flatMap((mod) => mod.resources);
@@ -78,13 +76,11 @@ export default function CourseDetailPage({ params }: { params: { course_id: stri
             try {
               const statusResponse = await savedResourcesApi.getResourceSavedStatus(resource.id);
               return [resource.id, statusResponse.saved] as const;
-            } catch (statusError) {
-              console.error(`Failed to fetch saved status for resource ${resource.id}`, statusError);
+            } catch {
               return [resource.id, false] as const;
             }
           })
         );
-
         setSavedStatus(Object.fromEntries(savedStatusEntries));
       } catch (err: any) {
         if (err.message === "You must log in before using this route.") {
@@ -96,7 +92,6 @@ export default function CourseDetailPage({ params }: { params: { course_id: stri
         setIsLoading(false);
       }
     };
-
     fetchCourseData();
   }, [course_id, router]);
 
@@ -104,65 +99,53 @@ export default function CourseDetailPage({ params }: { params: { course_id: stri
     try {
       setProcessingId(resource_id);
       await academic.completeResource(resource_id);
-      alert("Tanda Selesai berjaya direkodkan!");
+      showToast("Resource marked as complete.", "success");
     } catch (err: any) {
-      alert(`Ralat: ${err.message || "Gagal menanda selesai"}`);
+      showToast(err.message || "Failed to mark complete.", "error");
     } finally {
       setProcessingId(null);
     }
   };
 
   const handleToggleSaved = async (resource_id: number) => {
-    setSavedFeedback((current) => ({ ...current, [resource_id]: "" }));
-
+    setSavedFeedback((c) => ({ ...c, [resource_id]: "" }));
     try {
-      setSavingStatus((current) => ({ ...current, [resource_id]: true }));
-
+      setSavingStatus((c) => ({ ...c, [resource_id]: true }));
       if (savedStatus[resource_id]) {
         const response = await savedResourcesApi.unsaveResource(resource_id);
-        setSavedStatus((current) => ({ ...current, [resource_id]: false }));
-        setSavedFeedback((current) => ({
-          ...current,
-          [resource_id]: response.message || "Bahan dibuang daripada simpanan.",
-        }));
+        setSavedStatus((c) => ({ ...c, [resource_id]: false }));
+        setSavedFeedback((c) => ({ ...c, [resource_id]: response.message || "Removed from saved." }));
         return;
       }
-
       const response = await savedResourcesApi.saveResource(resource_id);
-      setSavedStatus((current) => ({ ...current, [resource_id]: true }));
-      setSavedFeedback((current) => ({
-        ...current,
-        [resource_id]: response.message || "Bahan berjaya disimpan.",
-      }));
+      setSavedStatus((c) => ({ ...c, [resource_id]: true }));
+      setSavedFeedback((c) => ({ ...c, [resource_id]: response.message || "Resource saved." }));
     } catch (err: any) {
-      setSavedFeedback((current) => ({
-        ...current,
-        [resource_id]: err.message || "Gagal mengemas kini simpanan bahan.",
-      }));
+      setSavedFeedback((c) => ({ ...c, [resource_id]: err.message || "Failed to update saved status." }));
     } finally {
-      setSavingStatus((current) => ({ ...current, [resource_id]: false }));
+      setSavingStatus((c) => ({ ...c, [resource_id]: false }));
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-50">
-        <div className="w-10 h-10 border-2 border-neutral-200 border-t-neutral-800 rounded-full animate-spin"></div>
-        <p className="mt-4 text-neutral-500 text-sm uppercase tracking-widest">Memuatkan kursus...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
+        <div className="w-10 h-10 border-2 border-slate-200 border-t-blue-600 rounded-full animate-spin" />
+        <p className="mt-4 text-slate-500 text-sm font-medium">Loading course…</p>
       </div>
     );
   }
 
   if (error || !course) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-neutral-100 text-center max-w-lg w-full">
-          <p className="text-red-500 mb-6">{error || "Kursus tidak dijumpai"}</p>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center max-w-lg w-full">
+          <p className="text-red-600 mb-6 text-sm">{error || "Course not found."}</p>
           <button
             onClick={() => router.push("/courses")}
-            className="px-6 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 transition-colors"
+            className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition-colors"
           >
-            Kembali ke Senarai Kursus
+            Back to Courses
           </button>
         </div>
       </div>
@@ -170,72 +153,62 @@ export default function CourseDetailPage({ params }: { params: { course_id: stri
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 font-sans text-neutral-900 pb-24">
-      <header className="bg-white border-b border-neutral-200 pt-20 pb-16 px-6">
+    <div className="min-h-screen bg-slate-50 pb-24">
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onDismiss={dismissToast} />
+
+      {/* Course Header */}
+      <header className="bg-white border-b border-slate-200 px-6 pt-10 pb-10">
         <div className="max-w-4xl mx-auto">
           <button
             onClick={() => router.push("/courses")}
-            className="text-neutral-400 hover:text-neutral-900 transition-colors text-sm font-medium mb-8 inline-flex items-center"
+            className="text-sm text-slate-400 hover:text-slate-700 font-medium transition-colors mb-6 inline-flex items-center gap-1"
           >
-            ← Kembali
+            ← Back to Courses
           </button>
-          <h1 className="text-4xl md:text-5xl font-light tracking-tight text-neutral-900 mb-4">
-            {course.title}
-          </h1>
-          <p className="text-lg text-neutral-500 leading-relaxed font-light">
-            {course.description}
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-3">{course.title}</h1>
+          <p className="text-slate-500 leading-relaxed">{course.description}</p>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 mt-16">
+      {/* Module Content */}
+      <main className="max-w-4xl mx-auto px-6 mt-10">
         {modules.length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-neutral-300 rounded-2xl">
-            <p className="text-neutral-500">Tiada modul disediakan untuk kursus ini lagi.</p>
+          <div className="text-center py-16 border border-dashed border-slate-300 rounded-2xl bg-white">
+            <p className="text-slate-500 text-sm">No modules available for this course yet.</p>
           </div>
         ) : (
-          <div className="space-y-12">
+          <div className="space-y-10">
             {modules.map((mod, index) => (
-              <section key={mod.id} className="relative">
-                <div className="flex items-baseline gap-4 mb-6">
-                  <span className="text-2xl font-light text-neutral-300">
+              <section key={mod.id}>
+                <div className="flex items-baseline gap-3 mb-5">
+                  <span className="text-xl font-light text-slate-300 tabular-nums select-none">
                     {(index + 1).toString().padStart(2, "0")}
                   </span>
                   <div>
-                    <h2 className="text-2xl font-medium text-neutral-800">{mod.title}</h2>
-                    <p className="text-neutral-500 text-sm mt-1">{mod.description}</p>
+                    <h2 className="text-lg font-semibold text-slate-900">{mod.title}</h2>
+                    {mod.description && <p className="text-sm text-slate-500 mt-0.5">{mod.description}</p>}
                   </div>
                 </div>
 
-                <div className="pl-10 space-y-4 border-l border-neutral-200 ml-3">
+                <div className="pl-9 space-y-4 border-l-2 border-slate-100 ml-2.5">
+                  {/* Quizzes */}
                   {mod.quizzes.length > 0 && (
                     <div className="space-y-3">
                       {mod.quizzes.map((quiz) => (
-                        <div
-                          key={quiz.id}
-                          className="bg-white p-5 rounded-xl border border-neutral-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
-                        >
+                        <div key={quiz.id} className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
                           <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <span className="text-xs font-bold tracking-wider uppercase bg-neutral-100 text-neutral-600 px-2.5 py-1 rounded-md">
-                                Kuiz
-                              </span>
-                              <h3 className="text-lg font-medium text-neutral-800">{quiz.title}</h3>
+                            <div className="flex items-center gap-2.5 mb-1.5">
+                              <span className="text-xs font-semibold uppercase tracking-wide bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-md">Quiz</span>
+                              <h3 className="text-sm font-semibold text-slate-900">{quiz.title}</h3>
                             </div>
-
-                            {quiz.description && (
-                              <p className="text-neutral-600 text-sm leading-relaxed">
-                                {quiz.description}
-                              </p>
-                            )}
+                            {quiz.description && <p className="text-sm text-slate-500 leading-relaxed">{quiz.description}</p>}
                           </div>
-
                           <div className="shrink-0">
                             <Link
                               href={`/courses/${course_id}/quiz/${quiz.id}`}
-                              className="inline-flex px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 shadow-sm border bg-white text-neutral-700 border-neutral-200 hover:border-neutral-900 hover:text-neutral-900"
+                              className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-150"
                             >
-                              Buka Kuiz
+                              Open Quiz
                             </Link>
                           </div>
                         </div>
@@ -243,41 +216,25 @@ export default function CourseDetailPage({ params }: { params: { course_id: stri
                     </div>
                   )}
 
+                  {/* Resources */}
                   {mod.resources.length === 0 ? (
-                    <p className="text-sm text-neutral-400 italic">Tiada bahan pembelajaran.</p>
+                    <p className="text-sm text-slate-400 italic py-2">No learning materials for this module.</p>
                   ) : (
                     mod.resources.map((res) => (
-                      <div
-                        key={res.id}
-                        className="bg-white p-6 rounded-xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow group flex flex-col md:flex-row md:items-center justify-between gap-6"
-                      >
+                      <div key={res.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-start justify-between gap-5">
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-xs font-bold tracking-wider uppercase bg-neutral-100 text-neutral-600 px-2.5 py-1 rounded-md">
-                              {res.resource_type}
-                            </span>
-                            <h3 className="text-lg font-medium text-neutral-800 group-hover:text-neutral-900 transition-colors">
-                              {res.title}
-                            </h3>
+                          <div className="flex items-center gap-2.5 mb-2">
+                            <span className="text-xs font-semibold uppercase tracking-wide bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md">{res.resource_type}</span>
+                            <h3 className="text-sm font-semibold text-slate-900">{res.title}</h3>
                           </div>
-
                           {res.resource_type === "text" && res.content_text && (
-                            <p className="text-neutral-600 text-sm leading-relaxed mt-3 bg-neutral-50 p-4 rounded-lg">
-                              {res.content_text}
-                            </p>
+                            <p className="text-sm text-slate-600 leading-relaxed mt-2 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3">{res.content_text}</p>
                           )}
-
-                          {(res.resource_type === "video" || res.resource_type === "link") &&
-                            res.content_url && (
-                              <a
-                                href={res.content_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-blue-600 hover:text-blue-800 hover:underline mt-2 inline-block"
-                              >
-                                Buka pautan {res.resource_type} ↗
-                              </a>
-                            )}
+                          {(res.resource_type === "video" || res.resource_type === "link") && res.content_url && (
+                            <a href={res.content_url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:text-blue-800 hover:underline mt-2 inline-block">
+                              Open {res.resource_type} link ↗
+                            </a>
+                          )}
                         </div>
 
                         <div className="shrink-0">
@@ -285,37 +242,31 @@ export default function CourseDetailPage({ params }: { params: { course_id: stri
                             <button
                               onClick={() => handleToggleSaved(res.id)}
                               disabled={savingStatus[res.id] === true}
-                              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 shadow-sm border ${
-                                savingStatus[res.id] === true
-                                  ? "bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed"
+                              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-150 border ${
+                                savingStatus[res.id]
+                                  ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
                                   : savedStatus[res.id]
-                                    ? "bg-neutral-900 text-white border-neutral-900 hover:bg-neutral-800"
-                                    : "bg-white text-neutral-700 border-neutral-200 hover:border-neutral-900 hover:text-neutral-900"
+                                  ? "bg-slate-900 text-white border-slate-900 hover:bg-slate-800"
+                                  : "bg-white text-slate-700 border-slate-300 hover:border-slate-500 hover:text-slate-900"
                               }`}
                             >
-                              {savingStatus[res.id] === true
-                                ? "Memproses..."
-                                : savedStatus[res.id]
-                                  ? "Disimpan"
-                                  : "Simpan Bahan"}
+                              {savingStatus[res.id] ? "Processing…" : savedStatus[res.id] ? "✓ Saved" : "Save Resource"}
                             </button>
 
                             <button
                               onClick={() => handleMarkComplete(res.id)}
                               disabled={processingId === res.id}
-                              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 shadow-sm border ${
+                              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-150 border ${
                                 processingId === res.id
-                                  ? "bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed"
-                                  : "bg-white text-neutral-700 border-neutral-200 hover:border-neutral-900 hover:text-neutral-900"
+                                  ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                                  : "bg-white text-slate-700 border-slate-300 hover:border-slate-500 hover:text-slate-900"
                               }`}
                             >
-                              {processingId === res.id ? "Memproses..." : "✓ Tanda Selesai"}
+                              {processingId === res.id ? "Processing…" : "✓ Mark Complete"}
                             </button>
 
                             {savedFeedback[res.id] && (
-                              <p className="max-w-[220px] text-right text-xs text-neutral-500">
-                                {savedFeedback[res.id]}
-                              </p>
+                              <p className="max-w-[200px] text-right text-xs text-slate-500">{savedFeedback[res.id]}</p>
                             )}
                           </div>
                         </div>
