@@ -16,6 +16,12 @@ function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
   ]);
 }
 
+const statusClass = (status: string) => {
+  if (status === "completed") return "bg-green-100 text-green-700";
+  if (status === "pending") return "bg-amber-100 text-amber-700";
+  return "bg-slate-100 text-slate-600";
+};
+
 export default function OrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -50,40 +56,61 @@ export default function OrdersPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
-        <div className="w-12 h-12 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin"></div>
-        <p className="mt-4 text-slate-500 font-medium text-lg">Memuatkan pesanan...</p>
+        <div className="w-10 h-10 border-2 border-slate-200 border-t-blue-600 rounded-full animate-spin" />
+        <p className="mt-4 text-slate-500 text-sm font-medium">Loading orders…</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
-      <main className="max-w-5xl mx-auto px-6 py-12">
+    <div className="min-h-screen bg-slate-50 pb-20">
+      <main className="max-w-5xl mx-auto px-6 py-10">
+
+        {/* Header */}
         <div className="mb-8">
-          <Link href="/bookstore" className="text-sm font-semibold text-slate-500 hover:text-slate-900">
-            ← Kembali ke Kedai Buku
+          <Link
+            href="/bookstore"
+            className="text-sm text-slate-400 hover:text-slate-700 font-medium transition-colors inline-flex items-center gap-1"
+          >
+            ← Back to Bookstore
           </Link>
-          <h1 className="mt-3 text-4xl font-extrabold text-slate-900">Sejarah Pesanan</h1>
+          <h1 className="mt-2 text-3xl font-bold text-slate-900">Order History</h1>
         </div>
 
-        {error ? (
-          <div className="bg-red-50 text-red-700 p-6 rounded-2xl border border-red-200">
+        {/* Error */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-2xl text-sm mb-6">
             {error}
           </div>
-        ) : orders.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-dashed border-slate-300 p-12 text-center">
-            <p className="text-slate-500 font-medium">Anda belum mempunyai sebarang pesanan.</p>
+        )}
+
+        {/* Empty State */}
+        {!error && orders.length === 0 ? (
+          <div className="bg-white border border-dashed border-slate-300 rounded-2xl py-16 text-center">
+            <p className="text-3xl mb-3">📦</p>
+            <h3 className="text-base font-semibold text-slate-800">No Orders Yet</h3>
+            <p className="text-sm text-slate-500 mt-1">
+              You haven&apos;t placed any orders.
+            </p>
+            <Link
+              href="/bookstore"
+              className="inline-block mt-5 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+            >
+              Visit Bookstore
+            </Link>
           </div>
         ) : (
           <div className="space-y-4">
             {orders.map((order) => (
               <div
                 key={order.id}
-                className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+                className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
               >
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">Pesanan #{order.id}</h2>
-                  <p className="text-sm text-slate-500 mt-1">
+                  <h2 className="text-base font-bold text-slate-900">
+                    Order #{order.id.toString().padStart(5, "0")}
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
                     {new Date(order.created_at).toLocaleDateString("ms-MY", {
                       year: "numeric",
                       month: "long",
@@ -94,14 +121,22 @@ export default function OrdersPage() {
                   </p>
                 </div>
 
-                <div className="flex flex-col md:items-end">
-                  <p className="text-lg font-black text-slate-900">RM {Number(order.total_amount).toFixed(2)}</p>
-                  <p className="text-sm text-slate-500 uppercase tracking-wider">{order.status}</p>
+                <div className="flex flex-col md:items-end gap-2">
+                  <p className="text-lg font-black text-slate-900">
+                    RM {Number(order.total_amount).toFixed(2)}
+                  </p>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${statusClass(
+                      order.status
+                    )}`}
+                  >
+                    {order.status}
+                  </span>
                   <Link
                     href={`/orders/${order.id}`}
-                    className="mt-3 text-sm font-semibold text-emerald-600 hover:text-emerald-700"
+                    className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
                   >
-                    Lihat Detail →
+                    View Details →
                   </Link>
                 </div>
               </div>

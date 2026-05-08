@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   api,
@@ -12,6 +12,8 @@ import {
   Question,
   QuizResult,
 } from "@/lib/api";
+import AppModal from "@/components/AppModal";
+import Toast from "@/components/Toast";
 
 type QuizQuestion = Question & { options?: AnswerOption[] };
 type QuizState = "intro" | "attempting" | "submitted" | "results";
@@ -40,20 +42,23 @@ export default function QuizPage({ params }: { params: { course_id: string; quiz
   const [mcqAnswers, setMcqAnswers] = useState<Record<number, number>>({});
   const [shortAnswers, setShortAnswers] = useState<Record<number, string>>({});
 
+  // Confirm modal for quiz submission
+  const [submitModalOpen, setSubmitModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Toast for save-answer feedback
+  const [toast, setToast] = useState({ visible: false, message: "", type: "success" as "success" | "error" | "info" });
+  const showToast = (message: string, type: "success" | "error" | "info" = "success") =>
+    setToast({ visible: true, message, type });
+  const dismissToast = useCallback(() => setToast((t) => ({ ...t, visible: false })), []);
+
   const loadQuizQuestions = async () => {
     const questionsData = await quizApi.getQuestions(quizId);
-
     return Promise.all(
       questionsData.questions.map(async (question) => {
-        if (question.question_type !== "multiple_choice") {
-          return question;
-        }
-
+        if (question.question_type !== "multiple_choice") return question;
         const optionsData = await quizApi.getAnswerOptions(question.id);
-        return {
-          ...question,
-          options: optionsData.answer_options,
-        };
+        return { ...question, options: optionsData.answer_options };
       })
     );
   };
@@ -72,15 +77,9 @@ export default function QuizPage({ params }: { params: { course_id: string; quiz
 
     const nextMcqAnswers: Record<number, number> = {};
     const nextShortAnswers: Record<number, string> = {};
-
     for (const savedAnswer of savedAnswers) {
-      if (savedAnswer.answer_option_id !== null) {
-        nextMcqAnswers[savedAnswer.question_id] = savedAnswer.answer_option_id;
-      }
-
-      if (savedAnswer.short_answer_text) {
-        nextShortAnswers[savedAnswer.question_id] = savedAnswer.short_answer_text;
-      }
+      if (savedAnswer.answer_option_id !== null) nextMcqAnswers[savedAnswer.question_id] = savedAnswer.answer_option_id;
+      if (savedAnswer.short_answer_text) nextShortAnswers[savedAnswer.question_id] = savedAnswer.short_answer_text;
     }
 
     setAttempt(attemptData.quiz_attempt);
@@ -94,12 +93,10 @@ export default function QuizPage({ params }: { params: { course_id: string; quiz
       setQuizState("results");
       return;
     }
-
     if (attemptData.quiz_attempt.submitted_at || attemptData.quiz_attempt.status !== "in_progress") {
       setQuizState("submitted");
       return;
     }
-
     setQuizState("attempting");
   };
 
@@ -107,35 +104,24 @@ export default function QuizPage({ params }: { params: { course_id: string; quiz
     const fetchInitialData = async () => {
       try {
         const session = await auth.me();
-        if (!session.authenticated) {
-          router.push("/login");
-          return;
-        }
+        if (!session.authenticated) { router.push("/login"); return; }
 
         const [quizData, attemptsData] = await Promise.all([
           quizApi.getQuiz(quizId),
           api.get<QuizAttemptsResponse>(`/quizzes/${quizId}/attempts`),
         ]);
-
         setQuiz(quizData.quiz);
 
         const activeAttempt = attemptsData.quiz_attempts.find(
-          (quizAttempt) =>
-            quizAttempt.user_id === session.user?.id &&
-            quizAttempt.status === "in_progress" &&
-            !quizAttempt.submitted_at
+          (a) => a.user_id === session.user?.id && a.status === "in_progress" && !a.submitted_at
         );
-
-        if (activeAttempt) {
-          await hydrateAttempt(activeAttempt.id);
-        }
+        if (activeAttempt) await hydrateAttempt(activeAttempt.id);
       } catch (err: any) {
-        setError(err.message || "Gagal memuatkan maklumat kuiz.");
+        setError(err.message || "Failed to load quiz.");
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchInitialData();
   }, [quizId, router]);
 
@@ -144,16 +130,12 @@ export default function QuizPage({ params }: { params: { course_id: string; quiz
       setQuizState("attempting");
       return;
     }
-
     try {
-      setProcessingState("Memulakan kuiz...");
-
+      setProcessingState("Starting quiz…");
       const startData = await quizApi.startAttempt(quizId);
-      const attemptId = startData.quiz_attempt.id;
-
-      await hydrateAttempt(attemptId);
+      await hydrateAttempt(startData.quiz_attempt.id);
     } catch (err: any) {
-      alert(`Ralat: ${err.message || "Gagal memulakan kuiz."}`);
+      showToast(err.message || "Failed to start quiz.", "error");
     } finally {
       setProcessingState("");
     }
@@ -161,62 +143,54 @@ export default function QuizPage({ params }: { params: { course_id: string; quiz
 
   const handleSaveAnswer = async (question: QuizQuestion) => {
     if (!attempt) return;
-
     try {
-      setProcessingState(`Menyimpan jawapan soalan ${question.id}...`);
-
+      setProcessingState(`Saving answer for question ${question.id}…`);
       const payload: { question_id: number; answer_option_id?: number; short_answer_text?: string } = {
         question_id: question.id,
       };
-
       if (question.question_type === "multiple_choice") {
         const selectedId = mcqAnswers[question.id];
-        if (!selectedId) {
-          throw new Error("Sila pilih jawapan terlebih dahulu.");
-        }
+        if (!selectedId) { showToast("Please select an answer first.", "error"); return; }
         payload.answer_option_id = selectedId;
       } else {
         const text = shortAnswers[question.id];
-        if (!text || !text.trim()) {
-          throw new Error("Sila masukkan jawapan terlebih dahulu.");
-        }
+        if (!text || !text.trim()) { showToast("Please enter an answer first.", "error"); return; }
         payload.short_answer_text = text.trim();
       }
-
       await quizApi.submitAnswer(attempt.id, payload);
-      alert("Jawapan berjaya disimpan.");
+      showToast("Answer saved.", "success");
     } catch (err: any) {
-      alert(`Ralat menyimpan: ${err.message}`);
+      showToast(err.message || "Failed to save answer.", "error");
     } finally {
       setProcessingState("");
     }
   };
 
-  const handleSubmitQuiz = async () => {
+  // Called when user clicks "Submit Quiz" — opens confirmation modal
+  const handleSubmitClick = () => setSubmitModalOpen(true);
+
+  // Called when user confirms submission in the modal
+  const handleSubmitConfirm = async () => {
     if (!attempt) return;
-
-    const confirmSubmit = window.confirm(
-      "Adakah anda pasti mahu menghantar kuiz ini? Pastikan semua soalan telah disimpan."
-    );
-    if (!confirmSubmit) return;
-
     try {
-      setProcessingState("Menghantar kuiz...");
+      setIsSubmitting(true);
       const submitData = await quizApi.submitAttempt(attempt.id);
       setAttempt(submitData.quiz_attempt);
+      setSubmitModalOpen(false);
       setQuizState("submitted");
     } catch (err: any) {
-      alert(`Ralat menghantar kuiz: ${err.message}`);
+      setSubmitModalOpen(false);
+      showToast(err.message || "Failed to submit quiz.", "error");
     } finally {
-      setProcessingState("");
+      setIsSubmitting(false);
     }
   };
 
   if (isLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-200 border-t-indigo-600"></div>
-        <p className="mt-4 text-sm uppercase tracking-widest text-slate-500">Memuatkan Sistem Kuiz...</p>
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+        <p className="mt-4 text-sm text-slate-500 font-medium">Loading quiz…</p>
       </div>
     );
   }
@@ -225,12 +199,9 @@ export default function QuizPage({ params }: { params: { course_id: string; quiz
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
         <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <p className="mb-6 text-red-500">{error || "Kuiz tidak dijumpai"}</p>
-          <button
-            onClick={() => router.back()}
-            className="rounded-lg bg-slate-900 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
-          >
-            Kembali
+          <p className="mb-6 text-red-600 text-sm">{error || "Quiz not found."}</p>
+          <button onClick={() => router.back()} className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800">
+            Go Back
           </button>
         </div>
       </div>
@@ -238,95 +209,103 @@ export default function QuizPage({ params }: { params: { course_id: string; quiz
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24 font-sans text-slate-900">
+    <div className="min-h-screen bg-slate-50 pb-24">
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onDismiss={dismissToast} />
+
+      {/* Submit Confirmation Modal */}
+      <AppModal
+        isOpen={submitModalOpen}
+        variant="info"
+        title="Submit Quiz?"
+        message="Make sure all answers have been saved before submitting. This action cannot be undone."
+        confirmLabel="Submit Quiz"
+        cancelLabel="Cancel"
+        isProcessing={isSubmitting}
+        onConfirm={handleSubmitConfirm}
+        onClose={() => setSubmitModalOpen(false)}
+      />
+
+      {/* Processing Overlay */}
       {processingState && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-sm">
-          <div className="flex items-center gap-4 rounded-xl bg-white px-6 py-4 shadow-lg">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-indigo-600"></div>
-            <p className="font-medium text-slate-700">{processingState}</p>
+          <div className="flex items-center gap-4 rounded-2xl bg-white px-6 py-4 shadow-lg border border-slate-200">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+            <p className="text-sm font-medium text-slate-700">{processingState}</p>
           </div>
         </div>
       )}
 
-      <header className="mb-12 border-b border-slate-200 bg-white px-6 py-8">
+      {/* Quiz Header */}
+      <header className="border-b border-slate-200 bg-white px-6 py-6">
         <div className="mx-auto flex max-w-4xl items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">{quiz.title}</h1>
-            <p className="mt-1 text-slate-500">Ujian Pemahaman Modul</p>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{quiz.title}</h1>
+            <p className="mt-1 text-sm text-slate-500">Module Assessment</p>
           </div>
           <button
             onClick={() => router.push(`/courses/${params.course_id}`)}
-            className="rounded-lg border border-transparent px-4 py-2 text-sm font-medium text-slate-400 transition-colors hover:border-slate-200 hover:text-slate-900"
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-800"
           >
-            Batal & Kembali
+            ← Back to Course
           </button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-6">
+      <main className="mx-auto max-w-4xl px-6 mt-10">
+
+        {/* Intro */}
         {quizState === "intro" && (
-          <div className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-50 text-3xl text-indigo-600">
-              Q
-            </div>
-            <h2 className="mb-6 text-2xl font-bold text-slate-800">Sedia untuk bermula?</h2>
-
-            <div className="mb-10 flex flex-col justify-center gap-6 sm:flex-row">
-              <div className="rounded-xl border border-slate-100 bg-slate-50 px-6 py-4">
-                <p className="mb-1 text-sm text-slate-500">Masa Diperuntukkan</p>
-                <p className="text-xl font-semibold text-slate-800">{quiz.time_limit_minutes ?? "-"} Minit</p>
+          <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-2xl text-blue-600 font-bold">Q</div>
+            <h2 className="mb-2 text-xl font-bold text-slate-900">Ready to begin?</h2>
+            <p className="text-sm text-slate-500 mb-8">Review the quiz details below before starting.</p>
+            <div className="mb-8 flex flex-col justify-center gap-4 sm:flex-row">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-4 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Time Limit</p>
+                <p className="text-lg font-bold text-slate-900">{quiz.time_limit_minutes ?? "—"} min</p>
               </div>
-              <div className="rounded-xl border border-slate-100 bg-slate-50 px-6 py-4">
-                <p className="mb-1 text-sm text-slate-500">Markah Lulus</p>
-                <p className="text-xl font-semibold text-slate-800">{quiz.passing_score ?? "-"}</p>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-4 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Passing Score</p>
+                <p className="text-lg font-bold text-slate-900">{quiz.passing_score ?? "—"}</p>
               </div>
             </div>
-
-            <button
-              onClick={handleStartQuiz}
-              className="w-full rounded-xl bg-indigo-600 px-8 py-3.5 text-lg font-bold text-white transition-all hover:bg-indigo-700 hover:shadow-lg sm:w-auto"
-            >
-              Mulakan Kuiz Sekarang
+            <button onClick={handleStartQuiz} className="w-full rounded-xl bg-blue-600 px-8 py-3 text-base font-bold text-white transition-colors hover:bg-blue-700 sm:w-auto">
+              Start Quiz
             </button>
           </div>
         )}
 
+        {/* Attempting */}
         {quizState === "attempting" && attempt && (
-          <div className="space-y-8">
-            <div className="sticky top-4 z-10 flex items-center justify-between rounded-xl border border-indigo-100 bg-indigo-50 p-4 shadow-sm">
-              <span className="font-semibold text-indigo-900">ID Percubaan: #{attempt.id}</span>
-              <button
-                onClick={handleSubmitQuiz}
-                className="rounded-lg bg-indigo-600 px-6 py-2 font-bold text-white transition-colors hover:bg-indigo-700"
-              >
-                Hantar Kuiz
+          <div className="space-y-6">
+            <div className="sticky top-[64px] z-10 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50 px-5 py-3 shadow-sm">
+              <span className="text-sm font-semibold text-blue-900">Attempt #{attempt.id}</span>
+              <button onClick={handleSubmitClick} className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-blue-700">
+                Submit Quiz
               </button>
             </div>
 
             {questions.map((question, index) => (
-              <div key={question.id} className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-                <div className="mb-6 flex items-start gap-4">
-                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
-                    {index + 1}
-                  </span>
+              <div key={question.id} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="mb-5 flex items-start gap-4">
+                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">{index + 1}</span>
                   <div>
-                    <h3 className="text-lg font-medium leading-snug text-slate-900">{question.question_text}</h3>
-                    <span className="mt-2 block text-xs font-medium uppercase tracking-wider text-slate-400">
-                      {question.points} Markah |{" "}
-                      {question.question_type === "multiple_choice" ? "Objektif" : "Subjektif"}
+                    <h3 className="text-base font-semibold leading-snug text-slate-900">{question.question_text}</h3>
+                    <span className="mt-1.5 block text-xs font-medium uppercase tracking-wider text-slate-400">
+                      {question.points} pts · {question.question_type === "multiple_choice" ? "Multiple Choice" : "Short Answer"}
                     </span>
                   </div>
                 </div>
 
-                <div className="space-y-3 pl-12">
+                <div className="space-y-3 pl-11">
                   {question.question_type === "multiple_choice" && question.options && (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {question.options.map((option) => (
                         <label
                           key={option.id}
-                          className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-all ${
+                          className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-all ${
                             mcqAnswers[question.id] === option.id
-                              ? "border-indigo-500 bg-indigo-50 shadow-sm"
+                              ? "border-blue-500 bg-blue-50"
                               : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                           }`}
                         >
@@ -336,15 +315,9 @@ export default function QuizPage({ params }: { params: { course_id: string; quiz
                             value={option.id}
                             checked={mcqAnswers[question.id] === option.id}
                             onChange={() => setMcqAnswers({ ...mcqAnswers, [question.id]: option.id })}
-                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                           />
-                          <span
-                            className={
-                              mcqAnswers[question.id] === option.id
-                                ? "font-medium text-indigo-900"
-                                : "text-slate-700"
-                            }
-                          >
+                          <span className={mcqAnswers[question.id] === option.id ? "font-medium text-blue-900" : "text-slate-700"}>
                             {option.option_text}
                           </span>
                         </label>
@@ -355,21 +328,19 @@ export default function QuizPage({ params }: { params: { course_id: string; quiz
                   {question.question_type === "short_answer" && (
                     <textarea
                       rows={3}
-                      placeholder="Taip jawapan anda di sini..."
+                      placeholder="Type your answer here…"
                       value={shortAnswers[question.id] || ""}
-                      onChange={(event) =>
-                        setShortAnswers({ ...shortAnswers, [question.id]: event.target.value })
-                      }
-                      className="w-full rounded-xl border border-slate-300 p-4 text-slate-800 outline-none transition-shadow focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                      onChange={(e) => setShortAnswers({ ...shortAnswers, [question.id]: e.target.value })}
+                      className="w-full rounded-xl border border-slate-300 p-4 text-sm text-slate-800 outline-none transition-shadow focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   )}
 
-                  <div className="mt-6 flex justify-end">
+                  <div className="flex justify-end pt-2">
                     <button
                       onClick={() => handleSaveAnswer(question)}
-                      className="rounded-lg border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+                      className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
                     >
-                      Simpan Jawapan Ini
+                      Save This Answer
                     </button>
                   </div>
                 </div>
@@ -378,62 +349,43 @@ export default function QuizPage({ params }: { params: { course_id: string; quiz
           </div>
         )}
 
+        {/* Submitted */}
         {quizState === "submitted" && attempt && (
-          <div className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-indigo-100 text-4xl text-indigo-600">
-              !
-            </div>
-            <h2 className="mb-3 text-3xl font-extrabold text-slate-900">Kuiz Telah Dihantar</h2>
-            <p className="mb-3 text-lg text-slate-500">
-              Percubaan anda telah berjaya dihantar dan sedang menunggu proses grading.
+          <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-50 text-2xl text-green-600">✓</div>
+            <h2 className="mb-2 text-xl font-bold text-slate-900">Quiz Submitted</h2>
+            <p className="mb-2 text-sm text-slate-500">Your attempt has been submitted and is awaiting grading.</p>
+            <p className="mb-8 text-xs text-slate-400">
+              Status: {attempt.status}
+              {attempt.submitted_at ? ` · Submitted ${new Date(attempt.submitted_at).toLocaleString("ms-MY")}` : ""}
             </p>
-            <p className="mb-10 text-sm text-slate-400">
-              Status semasa: {attempt.status}
-              {attempt.submitted_at
-                ? ` | Dihantar pada ${new Date(attempt.submitted_at).toLocaleString("ms-MY")}`
-                : ""}
-            </p>
-
-            <button
-              onClick={() => router.push(`/courses/${params.course_id}`)}
-              className="rounded-xl bg-slate-900 px-8 py-3.5 font-bold text-white transition-colors hover:bg-slate-800"
-            >
-              Kembali ke Modul Kursus
+            <button onClick={() => router.push(`/courses/${params.course_id}`)} className="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-slate-800">
+              Back to Course
             </button>
           </div>
         )}
 
+        {/* Results */}
         {quizState === "results" && results && (
-          <div className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-indigo-100 text-4xl text-indigo-600">
-              R
-            </div>
-            <h2 className="mb-2 text-3xl font-extrabold text-slate-900">Keputusan Kuiz</h2>
-            <p className="mb-8 text-lg text-slate-500">
-              Markah keseluruhan anda: {results.total_score ?? 0}
+          <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-2xl text-blue-600 font-bold">R</div>
+            <h2 className="mb-1 text-xl font-bold text-slate-900">Quiz Results</h2>
+            <p className="mb-8 text-slate-500 text-sm">
+              Total score: <span className="font-bold text-slate-900">{results.total_score ?? 0}</span>
             </p>
-
-            <div className="mb-10 flex justify-center gap-12 rounded-2xl border border-slate-100 bg-slate-50 p-6">
+            <div className="mb-8 flex justify-center gap-10 rounded-2xl border border-slate-100 bg-slate-50 px-6 py-5">
               <div className="text-center">
-                <p className="mb-1 text-sm font-semibold uppercase tracking-wider text-slate-500">
-                  Jawapan Betul
-                </p>
-                <p className="text-2xl font-bold text-slate-900">{results.correct_answers}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Correct</p>
+                <p className="text-2xl font-bold text-green-700">{results.correct_answers}</p>
               </div>
-              <div className="w-px bg-slate-200"></div>
+              <div className="w-px bg-slate-200" />
               <div className="text-center">
-                <p className="mb-1 text-sm font-semibold uppercase tracking-wider text-slate-500">
-                  Jawapan Salah
-                </p>
-                <p className="text-2xl font-bold text-slate-900">{results.incorrect_answers}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Incorrect</p>
+                <p className="text-2xl font-bold text-red-600">{results.incorrect_answers}</p>
               </div>
             </div>
-
-            <button
-              onClick={() => router.push(`/courses/${params.course_id}`)}
-              className="rounded-xl bg-slate-900 px-8 py-3.5 font-bold text-white transition-colors hover:bg-slate-800"
-            >
-              Kembali ke Modul Kursus
+            <button onClick={() => router.push(`/courses/${params.course_id}`)} className="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-slate-800">
+              Back to Course
             </button>
           </div>
         )}
